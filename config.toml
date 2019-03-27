@@ -1,0 +1,5 @@
+baseURL = "/"
+languageCode = "en-us"
+title = "Gregor, the coding cat"
+theme = "hugo-theme-hello-friend"
+publishDir = "repo_target/docs"
