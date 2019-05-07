@@ -3,3 +3,23 @@ languageCode = "en-us"
 title = "Gregor, the coding cat"
 theme = "hugo-theme-hello-friend"
 publishDir = "repo_target/docs"
+
+[languages]
+  [languages.en]
+    title = "Gregor the coding cat"
+    subtitle = "A blog about CS stuff"
+    keywords = ""
+    copyright = ""
+    menuMore = "Show more"
+    writtenBy = "Written by"
+    readMore = "Read more"
+    readOtherPosts = "Read other posts"
+    newerPosts = "Newer posts"
+    olderPosts = "Older posts"
+    minuteReadingTime = "min read"
+    dateFormatSingle = "2006-01-02"
+    dateFormatList = "2006-01-02"
+
+    [languages.en.params.logo]
+      logoText = "cd home"
+      logoHomeLink = "/"
