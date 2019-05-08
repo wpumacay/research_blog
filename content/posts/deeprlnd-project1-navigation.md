@@ -162,7 +162,7 @@ can consistently get an awerage reward of **+13** over 100 episodes.
 The code for our submission is hosted on [github](https://github.com/wpumacay/DeeprlND-projects/tree/master/project1-navigation). 
 The [README.md](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/README.md) 
 file already contains the instruction of how to setup the environment, but we repeat them
-here for completeness.
+here for completeness (and to save you a tab in your browser :laughing:).
 
 ### 2.1 Custom environment build
 
@@ -247,3 +247,192 @@ pip install tensorflow-gpu==1.12.0
 # install the navigation package and its dependencies using pip (dev mode to allow changes)
 pip install -e .
 ```
+
+## 3. An overview of the DQN algorithm
+
+As mentioned in the title, our agent is based on the DQN agent introduced in the 
+[**Human-level control through deep reinforcement learning**](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf) 
+paper by Mnih, et. al. We will give a brief description of the algorithm in this section,
+which is heavily based on Sutton and Barto's [book](http://incompleteideas.net/book/RLbook2018.pdf).
+For completeness we will start with a brief introduction to reinforcement learning, and
+then give the full description of the DQN algorithm.
+
+### 3.1 RL concepts
+
+Reinforcement Learning (RL) is a learning approach in which an **Agent** learns by
+**trial and error** while interacting with an **Environment**. The core setup is shown 
+in Figure 1, where we have an agent in a certain **state** \\( S_{t} \\)
+interacting with an environment by applying some **action** \\( A_{t} \\). 
+Because of this interaction, the agent receives a **reward** \\( R_{t+1} \\) from 
+the environment and it also ends up in a **new state** \\( S_{t+1} \\).
+
+{{<figure src="/imgs/img_rl_loop.png" alt="img-rl-loop" position="center" 
+    caption="Figure 4. RL interaction loop" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+This can be further formalize using the framework of Markov Decision Proceses (MDPs).
+Using this framework we can define our RL problem as follows:
+
+> A Markov Decision Process (MDP) is defined as a tuple of the following components:
+>
+> * **A state space** \\( \mathbb{S} \\) of configurations \\( s_{t} \\) for an agent.
+> * **An action space** \\( \mathbb{A} \\) of actions \\( a_{t} \\) that the agent can take in the environment.
+> * **A transition model** \\( p(s',r | s,a) \\) that defines the distribution of states
+>   that an agent can land on and rewards it can obtain \\( (s',r) \\) by taking an
+>   action \\( a \\) in a state \\( s \\).
+
+The objective of the agent is to maximize the **total sum of rewards** that it can
+get from its interactions, and because the environment can potentially be stochastic
+(recall that the transition model defines a probability distribution) the objective
+is usually formulated as an **expectation** ( \\( \mathbb{E}  \\) ) over the random 
+variable defined by the total sum of rewards. Mathematically, this objective is 
+described in as follows.
+
+$$
+\mathbb{E} \left \{ r_{t+1} + r_{t+2} + r_{t+3} + \dots \right \}
+$$
+
+Notice the expectation is over the sum of a sequence of rewards. This sequence comes
+from a **trajectory** (\\( \tau \\)) that the agent defines by interacting with the environment
+in a sequential manner.
+
+$$
+\tau = \left \{ (s_{0},a_{0},r_{1}),(s_{1},a_{1},r_{2}),\dots,(s_{t},a_{t},r_{t+1}),\dots \right \}
+$$
+
+Tasks that always give finite-size trajectories can be defined as **episodic** (like games), 
+whereas tasks that go on forever are defined as **continuous** (like life itself). The
+task we are dealing in this post is episodic, and the length of an episode (max. length
+of any trajectory) is 300.
+
+There is a slight addition to the objective defined earlier that is often used: **the discount factor**
+\\( \gamma \\). This factor tries to take into account the effect that a same ammount 
+of reward in the far future should be less interesting than the same amount now (kind of
+like interest rates when dealing with money). We introduce this by multiplying each
+reward by a power of this factor to the number of steps into the future.
+
+$$
+\mathbb{E} \left \{ r_{t+1} + \gamma r_{t+2} + \gamma^{2} r_{t+3} + \dots \right \}
+$$
+
+**Sidenote**: *The most important reason we use discounting is for mathematical 
+convenience, as it allows to keep our objective from exploding in the non-episodic 
+case (to derive this, just replace each \\( r_{t} \\) for the maximum reward \\( r_{max} \\), 
+and sum up the geometric series). There is another approach which deals with the [undiscounted 
+average reward setting](https://link.springer.com/content/pdf/10.1007%2FBF00114727.pdf). 
+This approach leads to a different set of bellman equations from the ones we will
+study.*
+
+A solution to the RL problem consists of a **Policy** \\( \pi \\), which is a mapping
+from the current state we are ( \\( s_{t} \\) ) to an appropriate action ( \\( a_{t} \\) )
+from the action space. Such mapping is basically a function, and we can define it as follows:
+
+> A **deterministic** policy is a mapping \\( \pi : \mathbb{S} \rightarrow \mathbb{A} \\)
+> that returns an action to take \\( a_{t} \\) from a given state \\( s_{t} \\).
+>
+> $$
+> a_{t} = \pi(s_{t})
+> $$
+
+We could also define an stochastic policy, which instead of returning an action
+\\( a_{t} \\) in a certain situation given by the state \\( s_{t} \\) it returns
+a distribution over all possible actions that can be taken in that situation 
+\\( a_{t} \sim \pi(.|s_{t}) \\).
+
+> A **stochastic** policy is a mapping \\( \pi : \mathbb{S} \times \mathbb{A} \rightarrow \mathbb{R} \\)
+> that returns a distribution over actions to take \\( a_{t} \\) from a given state \\( s_{t} \\).
+>
+> $$
+> a_{t} \sim \pi(.|s_{t})
+> $$
+
+Our objective can then be formulated as follows: **find a policy \\( \pi \\) that maximizes
+the expected discounted sum of rewards**.
+
+$$
+\max_{\pi} \mathbb{E}_{\pi} \left \{ r_{t+1} + \gamma r_{t+2} + \gamma^{2} r_{t+3} + \dots \right \}
+$$
+
+To wrap up this section we will introduce three more concepts that we will use 
+throughout the rest of this post: **returns** \\( G \\), **state-value functions** 
+\\( V(s) \\) and **action-value functions** \\( Q(s,a) \\).
+
+> The return \\( G_{t} \\) is defined as the discounted sum of rewards obtained
+> over a trajectory from time step \\( t \\) onwards.
+>
+> $$
+> G_{t} = r_{t+1} + \gamma r_{t+2} + \gamma^{2} r_{t+3} + \dots = \sum_{k=0}^{\infty} \gamma^{k} r_{t+k+1}
+> $$
+
+By using the return we can write the objective of the agent in a more compact way,
+as follows:
+
+$$
+\max_{\pi} \mathbb{E}_{\pi} \left \{ G_{t} \right \}
+$$
+
+> The state-value function \\( V_{\pi}(s) \\) is defined as the expected return that
+> an agent can get if it starts at state \\( s_{t} = s \\) and then follows policy
+> \\( \pi \\) onwards.
+>
+> $$
+> V_{\pi}(s) = \mathbb{E} \left \{ G_{t} | s_{t} = s; \pi \right \}
+> $$
+
+This function \\( V_{\pi}(s) \\) serves as a kind of **intuition of how well a certain
+state is if we are following a specific policy**. The figure below (taken from the DQN paper [2])
+illustrates this more clearly with the game of breakout as an example. The agent's 
+state-value function on the bottom part of the figure shows that in the state in which 
+the agent makes a hole in the bricks its estimation of the value greatly increases 
+(section labeled with *4*) in the graph.
+
+{{<figure src="/imgs/img_rl_vfunction_intuition.png" alt="fig-rl-vfunction-intuition" position="center" 
+    caption="Figure 6. State-value function in the game of breakout. Top: states of the agent. Bottom: estimate of the return from this state via state-value function. Taken from [2]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+> The action-value function \\( Q_{\pi}(s,a) \\) is defined as the expected return that
+> an agent can get if it starts at state \\( s_{t} = s \\), take an action \\( a_{t} = a \\)
+> and then follows the policy onwards.
+>
+> $$
+> Q_{\pi}(s,a) = \mathbb{E} \left \{ G_{t} | s_{t} = s, a_{t} = a; \pi \right \}
+> $$
+
+This function \\( Q_{\pi}(s,a) \\) serves also as a kind of **intuition of how well
+a certain action is if we apply it in a certation state if we are following a specific policy**.
+The figure below illustrates this more clearly (again, taken from the DQN paper [2])
+with the game of pong as an example. The agent's action-value function tell us how
+well is a certain action in a certain situation, and as you can see in the states labeled
+with (2) and (3) the function estimates that action Up will give a greater return than
+the other two actions.
+
+{{<figure src="/imgs/img_rl_qfunction_intuition.png" alt="fig-rl-qfunction-intuition" position="center" 
+    caption="Figure 7. Action-value function in the game of pong. Top: states of the agent. Bottom: estimate of the return from this state for each action via action-value function. Taken from [2]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+## 3.2 RL solution methods
+
+There are various methods that we can use to solve this problem. The figure below (from [3])
+shows a taxonomy of the available approaches and methods within each approach. We will
+be following the Value-based approach, in which we will try to obtain the optimal
+action-value function \\( Q^{\star} \\).
+
+{{<figure src="/imgs/img_rl_algs_taxonomy.png" alt="fig-rl-algs-taxonomy" position="center" 
+    caption="Figure 8. A non-exhaustive taxonomy of algorithms in modern RL. Taken from [3]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+The method we will use is called Q-learning, which is a model-free method that
+recovers \\( Q^{\star} \\) from experiences using the following update rule:
+
+$$
+Q(s,a) := Q(s,a) + \alpha ( r + \gamma \max_{a'} Q(s',a') - Q(s,a) )
+$$
+
+<!--The update rule for Q-learning tries to update the estimate of the q-value \\( Q(s,a) \\) 
+for the state-action pair \\( (s,a) \\) from an estimate of the true-->
+
+## References
+
+1. Sutton, Richard & Barto, Andrew. [*Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
+2. Mnih, Volodymyr & Kavukcuoglu, Koray & Silver, David, et. al.. [*Human-level control through deep-reinforcement learning*](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
+3. Achiam, Josh. [Spinning Up in Deep RL](https://spinningup.openai.com/en/latest/index.html)
