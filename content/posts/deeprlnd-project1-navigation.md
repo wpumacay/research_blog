@@ -19,16 +19,16 @@ from the *Banana Collector* environment from [**Unity ML-Agents**](https://githu
 
 The following are the topics to be covered in this post:
 
-1. Description of the *Banana Collector Environment*.
-2. Setting up the dependencies to run the accompanying code.
-3. An overview of the DQN algorithm.
-4. DQN Implementation.
-5. The chosen hyperparameters and some discussion.
-6. The results obtained and some discussion.
-7. An overview of the improvements: Double DQN.
-8. An overview of the improvements: Prioritized Experience Replay.
-9. Some ablation tests and some discussion.
-10. Final remarks and future improvements.
+1. [Description of the *Banana Collector Environment*.](#1-description-of-the-banana-collector-environment)
+2. [Setting up the dependencies to run the accompanying code.](#2-accompanying-code-and-setup)
+3. [An overview of the DQN algorithm.](#3-an-overview-of-the-dqn-algorithm)
+4. [DQN Implementation.](#4-dqn-implementation)
+5. [The chosen hyperparameters and some discussion.](#5-hyperparameters-selection)
+6. [The results obtained and some discussion.](#6-results-of-dqn-on-the-banana-collector-environment)
+7. [An overview of the improvements: Double DQN.](#7-improvements-double-dqn)
+8. [An overview of the improvements: Prioritized Experience Replay.](#8-improvements-prioritized-experience-replay)
+9. [Some ablation tests and some discussion.](#9-results-of-dqn-with-the-improvements)
+10. [Final remarks and future improvements.](#10-final-remarks-and-future-improvements)
 
 ## 1. Description of the Banana Collector Environment
 
@@ -663,7 +663,83 @@ correlations: **Experience Replay** and **Fixed Targets**.
 
 ### 3.5.2 DQN: Experience Replay
 
+Experience replay is a mechanism introduced in [2] and it consists of **Learning from
+past stored experiences during replay sessions**. Basically, we remember our experiences
+in memory (called a replay buffer) and learn from them later. This allows us make more
+efficient use of past experiences by not throwing away samples right away, and it also helps 
+to break one type of correlations: sequential correlations between experiences 
+\\( (s_{t},a_{t},r_{t+1},s_{t+1}) \\). In Figure 11 we try to depict this type of correlation
+by showing 3 consecutive experience tuples along a trajectory. Assuming we are doing
+one gradient update with each tuple using SGD we are then pushing our learned weights 
+according to the reward obtained (recall the td-target is used as a true estimate for
+our algorithm). So, we are effectively pushing our weights using each sample, which
+in turn depended on the previous one (both reward and next state).
+
+{{<figure src="/imgs/img_dqn_exp_replay_intuition.png" alt="fig-dqn-exp-replay-intuition" position="center" 
+    caption="Figure 11. One type of correlation (sequential). Rewards and states visited depend on the previous experiences. Adapted from [8]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+We'll borrow the example from the Udacity Nanodegree [8] to explain this issue a bit further:
+Suppose you are learning to play tennis, and you are using the action-value function 
+approximation algorithm from last section to learn from your tennis training experiences
+whether to use your forehand or backhand shots in specific situations. Recall that unlike 
+the tabular case, nearby pairs in state-action space will have similar values (which is 
+actually what we wanted when discussing "generalization"). In the case of our tennis 
+example, if we learn online as we practice we might start getting a situation that 
+favors using our forehand shot (because we might have started getting changes to
+do our forehand), which might be good for balls coming from the right. However,
+due to our function approximator, our Q-function will start to favor ever so slightly
+the forehand action even in cases were the ball comes to our left. I placed a question
+mark for the q-values of the other action as we might not know how their values are evolving
+as we update only the other action. If we have a single model for our \\( Q_{\theta} \\),
+as we change the weights of our network we will also slightly alter the values for other
+actions in potentially undesired ways.
+
+{{<figure src="/imgs/img_dqn_exp_replay_tennis_example.png" alt="fig-dqn-exp-replay-tennis-example" position="center" 
+    caption="Figure 12. An example of how correlations in sequences of data could be bad. Adapted from [8]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+To solve these issues, the Experience Replay mechanism makes the agent learn from
+minibatches of past stored experience during training steps. We basically put all
+our experience in memory and then sample uniformly at random from it, which helps 
+break the correlations between samples in the minibatch as they might not come 
+from consequent steps (or even come from different episodes). This is depicted in
+Figure 13 below.
+
+{{<figure src="/imgs/img_dqn_exp_replay_buffer.png" alt="fig-dqn-exp-replay-buffer" position="center" 
+    caption="Figure 13. Storing and sampling from a Replay buffer" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
 ### 3.5.3 DQN: Fixed Targets
+
+During training we are using the TD-target as the estimate of the true q-values
+that our Q-network should output for a specific pair \\( (s,a) \\). Unfortunately,
+this estimate is also being computed using the Q-network which effectively is forcing
+us to follow a moving target.
+
+### 3.5.4 Sidenote: on the intuition behind issues with correlations
+
+A way I like to use to reason about these issues related to correlations 
+is by looking at the loss function we want to optimize (shown below). As you can see, 
+we are computing a Mean-Square loss which computes the expectation over samples of 
+the square differences between targets and current estimates.
+
+$$
+L({\theta}) = \mathbb{E}_{(s,a,r,s') \sim D} \left \{ ( r + \gamma \max_{a'} Q_{\theta}(s',a') - Q_{\theta}(s,a) )^{2} \right \}
+$$
+
+As you can see, if our inputs (experience tuples) are correlated (breaking the
+i.i.d. assumption) we will not be able to compute this expectation from samples 
+(can't apply the law of large numbers nor use a monte carlo estimate). Moreover, 
+if trying to convert our RL problem into a supervised setting we will run into 
+the issue that the target estimates (labels) should be decoupled from the estimates 
+of our model. If not, we can run in instabilities by following a moving target,
+kind of like following our own opinions as universal truth, even when they might
+not be correct. Even more, if we start having strong opinions about a topic and use
+this to infer even more knowledge that reinforces these opinions, we will then fall
+into a vicious cycle of unstable learning. If that is the case in life, keep an open
+mind, recall good and bad experiences and don't forget to live with a little bit of 
+\\( \epsilon \\) here and there :wink:.
 
 ### 3.5.4 DQN: Putting it all together
 
@@ -690,3 +766,4 @@ correlations: **Experience Replay** and **Fixed Targets**.
 * [5] [*Stanford RL course by Emma Brunskill*](https://www.youtube.com/playlist?list=PLoROMvodv4rOSOPzutgyCTapiGlY2Nd8u)
 * [6] [*UCL RL course, by David Silver*](https://www.youtube.com/playlist?list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ)
 * [7] [UC Berkeley DeepRL course by Sergey Levine](http://rail.eecs.berkeley.edu/deeprlcourse/)
+* [8] [Udacity DeepRL Nanodegree](https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893)

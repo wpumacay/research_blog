@@ -5,6 +5,9 @@ theme = "hugo-theme-hello-friend"
 publishDir = "repo_target/docs"
 enableEmoji = true
 
+[params]
+    defaultTheme = "light"
+
 [languages]
   [languages.en]
     title = "Gregor the coding cat"
