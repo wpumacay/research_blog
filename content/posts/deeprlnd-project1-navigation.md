@@ -286,7 +286,7 @@ get from its interactions, and because the environment can potentially be stocha
 (recall that the transition model defines a probability distribution) the objective
 is usually formulated as an **expectation** ( \\( \mathbb{E}  \\) ) over the random 
 variable defined by the total sum of rewards. Mathematically, this objective is 
-described in as follows.
+described as follows.
 
 $$
 \mathbb{E} \left \{ r_{t+1} + r_{t+2} + r_{t+3} + \dots \right \}
@@ -303,13 +303,14 @@ $$
 Tasks that always give finite-size trajectories can be defined as **episodic** (like games), 
 whereas tasks that go on forever are defined as **continuous** (like life itself). The
 task we are dealing in this post is episodic, and the length of an episode (max. length
-of any trajectory) is 300.
+of any trajectory) is 300 steps.
 
 There is a slight addition to the objective defined earlier that is often used: **the discount factor**
 \\( \gamma \\). This factor tries to take into account the effect that a same ammount 
-of reward in the far future should be less interesting than the same amount now (kind of
-like interest rates when dealing with money). We introduce this by multiplying each
-reward by a power of this factor to the number of steps into the future.
+of reward in the far future should be less interesting to the agent than the same 
+amount now (kind of like interest rates when dealing with money). We introduce 
+this by multiplying each reward by a power of this factor to the number of steps 
+into the future.
 
 $$
 \mathbb{E} \left \{ r_{t+1} + \gamma r_{t+2} + \gamma^{2} r_{t+3} + \dots \right \}
@@ -320,8 +321,8 @@ convenience, as it allows to keep our objective from exploding in the non-episod
 case (to derive this, just replace each \\( r_{t} \\) for the maximum reward \\( r_{max} \\), 
 and sum up the geometric series). There is another approach which deals with the [undiscounted 
 average reward setting](https://link.springer.com/content/pdf/10.1007%2FBF00114727.pdf). 
-This approach leads to a different set of bellman equations from the ones we will
-study.*
+This approach leads to a different set of bellman equations from the ones that are normally
+studied, and therefore different algorithms.*
 
 A solution to the RL problem consists of a **Policy** \\( \pi \\), which is a mapping
 from the current state we are ( \\( s_{t} \\) ) to an appropriate action ( \\( a_{t} \\) )
@@ -334,13 +335,13 @@ from the action space. Such mapping is basically a function, and we can define i
 > a_{t} = \pi(s_{t})
 > $$
 
-We could also define an stochastic policy, which instead of returning an action
-\\( a_{t} \\) in a certain situation given by the state \\( s_{t} \\) it returns
+We could also define an stochastic policy which, instead of returning an action
+\\( a_{t} \\) in a certain situation given by the state \\( s_{t} \\), it returns
 a distribution over all possible actions that can be taken in that situation 
 \\( a_{t} \sim \pi(.|s_{t}) \\).
 
 > A **stochastic** policy is a mapping \\( \pi : \mathbb{S} \times \mathbb{A} \rightarrow \mathbb{R} \\)
-> that returns a distribution over actions to take \\( a_{t} \\) from a given state \\( s_{t} \\).
+> that returns a distribution over actions \\( a_{t} \\) to take from a given state \\( s_{t} \\).
 >
 > $$
 > a_{t} \sim \pi(.|s_{t})
@@ -403,7 +404,7 @@ a certain action is if we apply it in a certation state if we are following a sp
 The figure below illustrates this more clearly (again, taken from the DQN paper [2])
 with the game of pong as an example. The agent's action-value function tell us how
 well is a certain action in a certain situation, and as you can see in the states labeled
-with (2) and (3) the function estimates that action Up will give a greater return than
+with (2) and (3) the function estimates that action UP will give a greater return than
 the other two actions.
 
 {{<figure src="/imgs/img_rl_qfunction_intuition.png" alt="fig-rl-qfunction-intuition" position="center" 
@@ -421,18 +422,186 @@ action-value function \\( Q^{\star} \\).
     caption="Figure 8. A non-exhaustive taxonomy of algorithms in modern RL. Taken from [3]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
+Value based methods are based on the **Bellman Equations**, which specify what the
+optimal state-value and action-value functions should satisfy in order to be optimal.
+Below we show the **Bellman Optimality Equation** for \\( Q^{\star} \\), and the solution 
+\\( Q^{\star} \\) of this equation is a fixed point that can be computed exactly using
+*Dynamic Drogramming* (if a model of the environment is known) or with *Monte Carlo* and
+*Temporal Difference* methods (if no model of the environment is available).
+
+$$
+Q^{\star}(s,a) = \mathbb{E}_{(s,a,s',r)} \left \{ r + \gamma \max_{a'} Q^{\star}(s',a') \right \}
+$$
+
+## 3.3 Tabular Q-learning
+
 The method we will use is called Q-learning, which is a model-free method that
 recovers \\( Q^{\star} \\) from experiences using the following update rule:
 
 $$
-Q(s,a) := Q(s,a) + \alpha ( r + \gamma \max_{a'} Q(s',a') - Q(s,a) )
+Q(s,a) := \overbrace{Q(s,a)}^{\text{Current estimate}} + \alpha ( \overbrace{r + \gamma \max_{a'} Q(s',a')}^{\text{"Better" estimate}} - Q(s,a) )
 $$
 
-<!--The update rule for Q-learning tries to update the estimate of the q-value \\( Q(s,a) \\) 
-for the state-action pair \\( (s,a) \\) from an estimate of the true-->
+This update rule is used in the **tabular case**, which is used when dealing discrete state
+and action spaces. These cases allow to easily represent the action-value function in
+a table (numpy array or dictionary), and update each entry of this table separately.
+
+For example, consider a simple MDP with \\( \mathbb{S}=0,1\\) and \\( \mathbb{A}=0,1\\). 
+The action-value function could be represented with the following table.
+
+State (s)   | Action (a)    | Q-value Q(s,a)
+------------|---------------|---------------
+0  | 0 | Q(0,0)
+0  | 1 | Q(0,1)
+1  | 0 | Q(1,0)
+1  | 1 | Q(1,1)
+
+In python we could just use :
+
+```Python
+# define a Q-table initialized with zeros (using numpy)
+import numpy as np
+Q = np.zeros( (nStates, nActions), dtype = np.float32 )
+
+# define a Q-table initialized with zeros (using dictionaries)
+from collections import defaultdict
+Q = defaultdict( lambda : np.zeros( nActions ) )
+```
+
+The Q-learning algorithm for the tabular case is shown below, and it basically 
+consists of updating the estimate of the q-value \\( Q(s,a) \\) for the state-action 
+pair \\( (s,a) \\) from another estimate of the true q-value of the optimal policy given by 
+\\( r + \gamma \max_{a'} Q(s',a') \\) called the **TD-Target**.
+
+> **Q-learning (off-policy TD control**
+> * Algorithm parameters: step size \\( \alpha \in [0,1] \\), small \\( \epsilon \gt 0 \\)
+> * Initialize q-table \\( Q(s,a) \\) for all \\( s \in \mathbb{S}, a \in \mathbb{A} \\)
+>
+> * For each episode:
+>     * Sample initial state \\( s_{0} \\) from the starting distribution.
+>     * For each step \\( t \\) in the episode :
+>         * Select \\( a_{t} \\) from \\( s_{t} \\) using e-greedy from \\( Q \\)
+>         * Execute action \\( a_{t} \\) in the environment, and receive reward \\( r_{t+1} \\) and next state \\( s_{t+1} \\)
+>         * Update entry in q-table corresponding to \\( (s,a) \\):
+>
+> $$
+> Q(s,a) := Q(s,a) + \alpha ( r + \gamma \max_{a'} Q(s',a') - Q(s,a) )
+> $$
+
+In python we would have the following :
+
+```python
+
+def qlearning( env, Q, eps, alpha, gamma, numEpisodes, maxStepsPerEpisode ) :
+  """Run q-learning to estimate the optimal Q* for the given environment
+  
+  Args:
+    env                 : environment to be solved
+    Q                   : action value function represented as a table
+    eps                 : epsilon value for e-greedy heuristic (exploration)
+    alpha               : learning rate
+    gamma               : discount factor
+    numEpisodes         : number of episodes to run the algorithm
+    maxStepsPerEpisode  : maximum number of steps in an episode
+  """
+
+  for iepisode in range( numEpisodes ) :
+    # sample initial state from the starting distribution (given by env. impl.)
+    _s = env.reset()
+
+    for istep in range( maxStepsPerEpisode ) :
+      # select action using e-greedy policy
+      _a = np.random.randint( env.nA ) if np.random.random() < eps else np.argmax( Q[_s] )
+      # execute action in the environment and receive reward and next state
+      _snext, _r, _finished, _ = env.step( _a )
+      # compute target to update
+      if _finished :
+        _tdTarget = _r
+      else :
+        _tdTarget = _r + gamma * np.max( Q[_snext] )
+      # update entry for (_s,_a) using q-learning update rule
+      Q[_s][_a] = Q[_s][_a] + alpha * ( _tdTarget - Q[_s][_a] )
+
+      # cache info for next step
+      _s = _snext
+```
+
+For further information about Q-learning you can check resources from [4,5,6]
+
+## 3.4 Q-learning with function approximation
+
+The tabular case provides a nice way to solve our problem, but at the cost of storing
+a big table with one entry per possible \\( (s,a) \\) pair. This is not scalable to
+larger state spaces, which is the case for continous spaces. One approach would be
+to discretize the state space into bins for various \\( (s,a) \\), treat each bin as
+an entry for the table and then solve as in the tabular case. However this is not
+practical for various reasons :
+
+* As the discretization gets more precise we end up with more bins and our table
+  explodes in size. This is an exponential explosion due to the **curse of dimensionality**.
+* Each possible \\( (s,a) \\) is stored separately and updated separately, which
+  doesn't take into account the fact that nearby \\( (s,a) \\) pairs should have 
+  similar \\( Q(s,a) \\) values. This means we are not generalizing our knowledge of
+  one pair to nearby pairs.
+
+To solve these issues we make use of function approximators like linear models,
+radial basis functions, neural networks, etc., which allow us to scale up to high
+dimensional spaces and "generalize" over these spaces.
+
+The Q-learning algorithm can be rewritten to use function approximation. In this case
+we parametrize our action-value function as \\( Q_{\theta}(s,a) \\) where \\( \theta \\)
+are the parameters of the function approximator, e.g. the weights of a neural network.
+Recall from tabular Q-learning that the update rule tried to improve an estimate of
+a q-value \\( Q(s,a) \\) from another estimate \\( r + \gamma \max_{a'} Q(s',a') \\) 
+which we called TD-target. This was necessary as we did not have a true value for the
+q-value at \\( (s,a) \\), so we had to use a guess.
+
+Suppose we had access to the actual q-value for all \\( (s,a) \\) possible pairs.
+We could then use this true q-value and make our estimates become these true q-values.
+In the tabular case we could just replace for each entry, and for the function 
+approximation case we make something similar: What do we do if we have the true values
+(or labels) that our model has to give for some inputs?. Well, we just **fit** our model
+to the data **like in supervised learning**.
+
+$$
+\theta = \argmin_{\theta} \mathbb{E}_{(s,a) \sim D} \left \{ ( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \}
+$$
+
+If our function approximator is differentiable we then could just use **Gradient Descent**
+to obtain the parameters \\( \theta \\) of our model:
+
+$$
+\theta := \theta - \alpha \nabla_{\theta} \mathbb{E}_{(s,a) \sim D} \left \{ ( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \} \\
+\rightarrow \theta := \theta - \alpha \mathbb{E}_{(s,a) \sim D} \left \{ \nabla_{\theta}( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \} \\
+\rightarrow \theta := \theta + \alpha \mathbb{E}_{(s,a) \sim D} \left \{ (Q^{\star}(s,a) - Q_{\theta}(s,a)) \nabla_{\theta}Q_{\theta}\vert_{(s,a)} \right \} \\
+$$
+
+Or, if using **Stochastic Gradient Descent** (SGD) :
+
+$$
+\theta := \theta + \alpha (Q^{\star}(s,a) - Q_{\theta}(s,a)) \nabla_{\theta}Q_{\theta}\vert_{(s,a)}
+$$
+
+> **Q-learning with function approximation**
+> * **Parameters**: learning rate \\( \alpha \in [0,1] \\), small \\( \epsilon \gt 0 \\)
+> * Initialize function approximator \\( Q_{\theta} \\)
+>
+> * For each episode:
+>     * Sample initial state \\( s_{0} \\) from the starting distribution
+>     * For each step \\( t \\) in the episode :
+>         * Select \\( a_{t} \\) from \\( s_{t} \\) using e-greedy from \\( Q \\)
+>         * Execute action \\( a_{t} \\) in the environment, and receive reward \\( r_{t+1} \\) and next state \\( s_{t+1} \\)
+>         * Update parameters \\( \{theta} \\) using the following update rule :
+>
+> $$
+> \theta := \theta + \alpha ( Q^{\star}(s_{t},a_{t}) - Q_{\theta}(s_{t},a_{t}) ) \nabla_{\theta} Q_{\theta}\vert_{s=s_{t},a=a_{t}}
+> $$
 
 ## References
 
-1. Sutton, Richard & Barto, Andrew. [*Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
-2. Mnih, Volodymyr & Kavukcuoglu, Koray & Silver, David, et. al.. [*Human-level control through deep-reinforcement learning*](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
-3. Achiam, Josh. [Spinning Up in Deep RL](https://spinningup.openai.com/en/latest/index.html)
+* [1] Sutton, Richard & Barto, Andrew. [*Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
+* [2] Mnih, Volodymyr & Kavukcuoglu, Koray & Silver, David, et. al.. [*Human-level control through deep-reinforcement learning*](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
+* [3] Achiam, Josh. [Spinning Up in Deep RL](https://spinningup.openai.com/en/latest/index.html)
+* [4] Simonini, Thomas. [*A Free course in Deep Reinforcement Learning from beginner to expert*](https://simoninithomas.github.io/Deep_reinforcement_learning_Course/)
+* [5] [*Stanford RL course by Emma Brunskill*](https://www.youtube.com/playlist?list=PLoROMvodv4rOSOPzutgyCTapiGlY2Nd8u)
+* [6] [*UCL RL course, by David Silver*](https://www.youtube.com/playlist?list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ)
