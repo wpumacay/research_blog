@@ -22,12 +22,13 @@ The following are the topics to be covered in this post:
 1. Description of the *Banana Collector Environment*.
 2. Setting up the dependencies to run the accompanying code.
 3. An overview of the DQN algorithm.
-4. The chosen hyperparameters and some discussion.
-5. The results obtained and some discussion.
-6. An overview of the improvements: Double DQN.
-7. An overview of the improvements: Prioritized Experience Replay.
-8. Some ablation tests and some discussion.
-9. Final remarks and future improvements.
+4. DQN Implementation.
+5. The chosen hyperparameters and some discussion.
+6. The results obtained and some discussion.
+7. An overview of the improvements: Double DQN.
+8. An overview of the improvements: Prioritized Experience Replay.
+9. Some ablation tests and some discussion.
+10. Final remarks and future improvements.
 
 ## 1. Description of the Banana Collector Environment
 
@@ -411,7 +412,7 @@ the other two actions.
     caption="Figure 7. Action-value function in the game of pong. Top: states of the agent. Bottom: estimate of the return from this state for each action via action-value function. Taken from [2]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
-## 3.2 RL solution methods
+### 3.2 RL solution methods
 
 There are various methods that we can use to solve this problem. The figure below (from [3])
 shows a taxonomy of the available approaches and methods within each approach. We will
@@ -433,7 +434,7 @@ $$
 Q^{\star}(s,a) = \mathbb{E}_{(s,a,s',r)} \left \{ r + \gamma \max_{a'} Q^{\star}(s',a') \right \}
 $$
 
-## 3.3 Tabular Q-learning
+### 3.3 Tabular Q-learning
 
 The method we will use is called Q-learning, which is a model-free method that
 recovers \\( Q^{\star} \\) from experiences using the following update rule:
@@ -528,7 +529,7 @@ def qlearning( env, Q, eps, alpha, gamma, numEpisodes, maxStepsPerEpisode ) :
 
 For further information about Q-learning you can check resources from [4,5,6]
 
-## 3.4 Q-learning with function approximation
+### 3.4 Function approximation
 
 The tabular case provides a nice way to solve our problem, but at the cost of storing
 a big table with one entry per possible \\( (s,a) \\) pair. This is not scalable to
@@ -548,17 +549,18 @@ To solve these issues we make use of function approximators like linear models,
 radial basis functions, neural networks, etc., which allow us to scale up to high
 dimensional spaces and "generalize" over these spaces.
 
-The Q-learning algorithm can be rewritten to use function approximation. In this case
-we parametrize our action-value function as \\( Q_{\theta}(s,a) \\) where \\( \theta \\)
+Building on top of the previous Q-learning algorithm, we can write an algorithm to
+obtain the action-value function using function approximation. In this case we 
+parametrize our action-value function as \\( Q_{\theta}(s,a) \\) where \\( \theta \\)
 are the parameters of the function approximator, e.g. the weights of a neural network.
 Recall from tabular Q-learning that the update rule tried to improve an estimate of
 a q-value \\( Q(s,a) \\) from another estimate \\( r + \gamma \max_{a'} Q(s',a') \\) 
 which we called TD-target. This was necessary as we did not have a true value for the
 q-value at \\( (s,a) \\), so we had to use a guess.
 
-Suppose we had access to the actual q-value for all \\( (s,a) \\) possible pairs.
+Suppose we have access to the actual q-value for all \\( (s,a) \\) possible pairs.
 We could then use this true q-value and make our estimates become these true q-values.
-In the tabular case we could just replace for each entry, and for the function 
+In the tabular case we could just replace these for each entry, and for the function 
 approximation case we make something similar: What do we do if we have the true values
 (or labels) that our model has to give for some inputs?. Well, we just **fit** our model
 to the data **like in supervised learning**.
@@ -571,8 +573,8 @@ If our function approximator is differentiable we then could just use **Gradient
 to obtain the parameters \\( \theta \\) of our model:
 
 $$
-\theta := \theta - \alpha \nabla_{\theta} \mathbb{E}_{(s,a) \sim D} \left \{ ( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \} \\
-\rightarrow \theta := \theta - \alpha \mathbb{E}_{(s,a) \sim D} \left \{ \nabla_{\theta}( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \} \\
+\theta := \theta - \frac{1}{2} \alpha \nabla_{\theta} \mathbb{E}_{(s,a) \sim D} \left \{ ( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \} \\
+\rightarrow \theta := \theta - \frac{1}{2} \alpha \mathbb{E}_{(s,a) \sim D} \left \{ \nabla_{\theta}( Q^{\star}(s,a) - Q_{\theta}(s,a) )^{2} \right \} \\
 \rightarrow \theta := \theta + \alpha \mathbb{E}_{(s,a) \sim D} \left \{ (Q^{\star}(s,a) - Q_{\theta}(s,a)) \nabla_{\theta}Q_{\theta}\vert_{(s,a)} \right \} \\
 $$
 
@@ -582,20 +584,102 @@ $$
 \theta := \theta + \alpha (Q^{\star}(s,a) - Q_{\theta}(s,a)) \nabla_{\theta}Q_{\theta}\vert_{(s,a)}
 $$
 
-> **Q-learning with function approximation**
+Unfortunately, we do not have an oracle that would tell us the true q-values for
+each possible \\( (s,a) \\) pair. Here we use a similar approach to tabular Q-learning,
+namely use an estimate of the true q-value to update our current estimate. This estimate
+of the true q-value was our TD-target, so we could just replace it in the SGD update rule
+derived before:
+
+$$
+\theta := \theta + \alpha (r + \gamma \max_{a'}Q_{\theta}(s',a') - Q_{\theta}(s,a)) \nabla_{\theta}Q_{\theta}\vert_{(s,a)}
+$$
+
+This yields the following algorithm:
+
+> **Action-Value function approximation**
 > * **Parameters**: learning rate \\( \alpha \in [0,1] \\), small \\( \epsilon \gt 0 \\)
-> * Initialize function approximator \\( Q_{\theta} \\)
+> * Initialize a parametrized action-value function \\( Q_{\theta} \\)
 >
 > * For each episode:
 >     * Sample initial state \\( s_{0} \\) from the starting distribution
 >     * For each step \\( t \\) in the episode :
->         * Select \\( a_{t} \\) from \\( s_{t} \\) using e-greedy from \\( Q \\)
+>         * Select \\( a_{t} \\) from \\( s_{t} \\) using e-greedy from \\( Q_{\theta} \\)
 >         * Execute action \\( a_{t} \\) in the environment, and receive reward \\( r_{t+1} \\) and next state \\( s_{t+1} \\)
+>         * If \\( s' \\) is terminal:
+>             * \\( Q_{target} = r \\)
+>         * Else:
+>             * \\( Q_{target} = r + \gamma \max_{a'}Q_{\theta}(s',a') \\)
 >         * Update parameters \\( \{theta} \\) using the following update rule :
 >
 > $$
-> \theta := \theta + \alpha ( Q^{\star}(s_{t},a_{t}) - Q_{\theta}(s_{t},a_{t}) ) \nabla_{\theta} Q_{\theta}\vert_{s=s_{t},a=a_{t}}
+> \theta := \theta + \alpha ( Q_{target} - Q_{\theta}(s_{t},a_{t}) ) \nabla_{\theta} Q_{\theta}\vert_{s=s_{t},a=a_{t}}
 > $$
+
+This algorithm forms the basis of the DQN agent, which adds various improvements
+on top of this base algorithm. These improvements help to stabilize learning as
+there are various issues when using the Vanilla version of this algorithm directly
+with a Deep Neural Network as a function approximator.
+
+### 3.5 Deep Q-Learning
+
+At last, this section will describe the Deep Q-Learning algorithm, which builds
+on top of the algorithm previously described.
+
+### 3.5.1 End-to-end learning
+
+A key issue we did not discussed in the previous section was how we used these
+function approximators, which is actually a similar story to the previous techniques
+used in Computer Vision before Deep Learning came back to life.
+
+Usually when using a function approximator the inputs to this model are not direct
+raw sensory data, but some intermediate representation in the form of features. These
+features had to be carefully engineered for the specific task at hand (like in the 
+case of Computer Vision). Fortunately, we can use Deep Learning to help us come 
+with the right internal features required for the problem we are trying to solve,
+as shown in the image below.
+
+{{<figure src="/imgs/img_deeprl_intuition_1.png" alt="fig-deeprl-intuition-1" position="center" 
+    caption="Figure 9. End to end training of an image classification task using Deep Learning. Taken from [7]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+Similarly, we can combine Deep Learning (as powerful function approximators) with
+Reinforcement Learning into a similar pipeline that would allow the agent learn
+the required representations to solve the task at hand.
+
+{{<figure src="/imgs/img_deeprl_intuition_2.png" alt="fig-deeprl-intuition-2" position="center" 
+    caption="Figure 10. End to end training in the context of DeepRL. Taken from [7]" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+However, unlike supervised learning, the RL setup forces us to deal with sequential 
+data, which break the i.i.d. assumption (independent and identically distributed).
+This brings correlations in the data that break direct vanilla approaches (just
+replacing the function approximator with a deep network, and hoping for the best).
+Moreover, unlike the tabular setup, there are no convergence guarantees for our
+algorithms when using non-linear function approximators (see Chapter 11 in [1]).
+
+To solve part of these issues, the authors in [2] developed various improvements
+to the Vanilla setting that helped stabilize learning and break these annoying 
+correlations: **Experience Replay** and **Fixed Targets**.
+
+### 3.5.2 DQN: Experience Replay
+
+### 3.5.3 DQN: Fixed Targets
+
+### 3.5.4 DQN: Putting it all together
+
+## 4. DQN Implementation
+
+## 5. Hyperparameters selection
+
+## 6. Results of DQN on the Banana Collector Environment
+
+## 7. Improvements: Double DQN
+
+## 8. Improvements: Prioritized Experience Replay
+
+## 9. Results of DQN with the improvements
+
+## 10. Final remarks and future improvements.
 
 ## References
 
@@ -605,3 +689,4 @@ $$
 * [4] Simonini, Thomas. [*A Free course in Deep Reinforcement Learning from beginner to expert*](https://simoninithomas.github.io/Deep_reinforcement_learning_Course/)
 * [5] [*Stanford RL course by Emma Brunskill*](https://www.youtube.com/playlist?list=PLoROMvodv4rOSOPzutgyCTapiGlY2Nd8u)
 * [6] [*UCL RL course, by David Silver*](https://www.youtube.com/playlist?list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ)
+* [7] [UC Berkeley DeepRL course by Sergey Levine](http://rail.eecs.berkeley.edu/deeprlcourse/)
