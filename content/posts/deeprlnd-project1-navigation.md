@@ -877,27 +877,338 @@ itself in a kind of library-agnostic way (effectively decoupling the RL part fro
 the DL part). At the end of this section we will add some considerations we made 
 for our implementation.
 
-### 4.1 Interfaces
+### 4.1 Interfaces amd Concretions
 
-We first implement various interfaces for all components of our DQN algorithm :
+Our implementation makes use of abstractions and decoupling, as we implemented 
+the algorithm from scratch. The main reason is that we wanted to grasp extra 
+details of the algorithm without following another implementation step by step
+(and also to avoid having a pile of tf.ops to deal with or some pytorch specific 
+functionality being around the core features of the algorithm :smile:).
 
-* **Agent Interface**
-* **Model Interface**
-* **Memory Interface**
-* **Trainer**
+Just to be in the same page, by an **Interface** we mean a class that provides
+a blueprint for other classes to extend. This interfaces could have declarations
+of methods and data that its objects might have, but it does not implement them
+(at least most of them) and leaves some *pure-virtual* methods to be implemented
+by a child class. A concretion is a specific class that extends the functionality 
+of this interface, and it has to implement the pure-virtual methods. For example,
+our **agent interface** defines the functionality that is exposed by any *agent* 
+along with some code that all concretions should have (like the actual steps of
+the DQN algorithm) but leaves some methods for the concrete agents, like the preprocess
+method which is case specific; and an **agent concretion** could be an agent that 
+extends this functionality (and gains the common DQN implementation) but implements
+its own version of the preprocess step.
 
-* **Agent interface**: has the implemented steps of the DQN algorithm. This has as
-  components the model and the memory, and queries it as it requires.
+The interfaces and some of its concretions are shown below:
 
-* **Model interface**: has the interface for the required functionality of the
-  models.
+* **Agent Interface**, along concrete agents for **BananaSimple**, **BananaVisual** and **Gridworld**.
+* **Model Interface**, along concrete models for **Pytorch**, **Tensorflow** or a **numpy q-table**.
+* **Memory Interface**, along concrete buffers like **ReplayBuffer** and **PriorityBuffer**.
 
-### Agent interface
+We wanted to make these interfaces as decoupled as possible from any Deep Learning
+package, which allowed us to test each component separately (we did not want to
+get into subtle bugs and poor performance due to specifics of the DL package). We
+specially made use of this feature when testing the core agent interface with a simple
+gridworld environment. This allowed us to find some bugs in our inplementation of the
+steps in the DQN algorithm that might have taken us more time if considering also
+the possibility that our DL model was buggy.
+
+### Agent Interface and Concretions
 
 This interface has the implementation of the steps in the DQN algorithm, and has
-as components the model and the memory in order to query them as needed. This is
-an "Abstract Class" in the sense that it shouldn't be instantiated. Instead, a specific
+as components the model and memory in order to query them as needed. This is an 
+"Abstract Class" in the sense that it shouldn't be instantiated. Instead, a specific
 class that inherits from this interface has to implement the **preprocess** method.
+Below we show this interface (only the methods, to give a sense of how this interface works),
+which can be found in the [agent.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/core/agent.py)
+file in the **dqn/core** folder of the navigation package. 
+
+The key methods to be considered are the **__init__**, **act**, **step**, **_preprocess** 
+and **_learn** methods, which implement most of the required steps of the DQN algorithm.
+We will discuss some of the details of these in snippets below, and encourage to
+look at the full implementation using the hyperlinks provided.
+
+```python
+
+class IDqnAgent( object ) :
+
+    def __init__( self, agentConfig, modelConfig, modelBuilder, backendInitializer ) :
+        """Constructs a generic Dqn agent, given configuration information
+
+        Args:
+            agentConfig (DqnAgentConfig)  : config object with agent parameters
+            modelConfig (DqnModelConfig)  : config object with model parameters
+            modelBuilder (function)       : factory function to instantiate the model
+            backendInitializer (function) : function to be called to intialize specifics of each DL library
+
+        """
+        ###############################################
+        ##          IMPLEMENTATION HERE
+        ###############################################
+
+    def save( self, filename ) :
+        """Saves learned models into disk
+
+        Args: 
+            filename (str) : filepath where we want to save the our model
+
+        """
+        ###############################################
+        ##          IMPLEMENTATION HERE
+        ###############################################
+
+    def load( self, filename ) :
+        """Loads a trained model from disk
+
+        Args:
+            filename (str) : filepath where we want to load our model from
+
+        """
+        ###############################################
+        ##          IMPLEMENTATION HERE
+        ###############################################
+
+    def act( self, state, inference = False ) :
+        """Returns an action to take from the given state
+
+        Args:
+            state (object)    : state|observation coming from the simulator
+            inference (bool)  : whether or not we are in inference mode
+
+        Returns:
+            int : action to take (assuming discrete actions space)
+
+        """
+        ###############################################
+        ##          IMPLEMENTATION HERE
+        ###############################################
+
+    def step( self, transition ) :
+        """Does one step of the learning algorithm, from Mnih et. al.
+           https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+
+        """
+        ###############################################
+        ##          IMPLEMENTATION HERE
+        ###############################################
+
+    def _preprocess( self, rawState ) :
+        """Preprocess a raw state into an appropriate state representation
+    
+        Args:
+            rawState (np.ndarray) : raw state to be transformed
+
+        Returns:
+            np.ndarray : preprocess state into the approrpiate representation
+        """
+        raise NotImplementedError( 'IDqnAgent::_preprocess> virtual method' )
+        
+    def _learn( self ) :
+        """Makes a learning step using the DQN algorithm from Mnih et. al.
+           https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+
+        """
+        ###############################################
+        ##          IMPLEMENTATION HERE
+        ###############################################
+
+    @property
+    def epsilon( self ) :
+        return self._epsilon
+
+    @property
+    def seed( self ) :
+        return self._seed
+        
+    @property
+    def learningMaxSteps( self ) :
+        return self._learningMaxSteps
+    
+    @property
+    def actorModel( self ) :
+        return self._qmodel_actor
+
+    @property
+    def targetModel( self ) :
+        return self._qmodel_target
+
+    @property
+    def replayBuffer( self ) :
+        return self._rbuffer
+```
+
+* First we have the [**\_\_init\_\_**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L13) 
+  method, whose implementation is shown briefly in the snippet below. This is the
+  constructor of our agent and is in charge of copy the hyperparameters from the
+  passed configuration objects, create the models (action-value and target action-value
+  networks), create the replay buffer (or a priority-based replay buffer if requested) 
+  and some other initialization stuff.
+
+```python
+    def __init__( self, agentConfig, modelConfig, modelBuilder, backendInitializer ) :
+        """Constructs a generic Dqn agent, given configuration information
+
+        Args:
+            agentConfig (DqnAgentConfig)  : config object with agent parameters
+            modelConfig (DqnModelConfig)  : config object with model parameters
+            modelBuilder (function)       : factory function to instantiate the model
+            backendInitializer (function) : function to be called to intialize specifics of each DL library
+
+        """
+
+        ##################################
+        ##     COPY HYPERPARAMETERS     ##
+        ##################################
+        
+        # seed numpy's random number generator
+        np.random.seed( self._seed )
+
+        # create the model accordingly
+        self._qmodel_actor = modelBuilder( 'actor_model', modelConfig, True )
+        self._qmodel_target = modelBuilder( 'target_model', modelConfig, False )
+
+        ##################################
+        ##     INITIALIZE  MODELS       ##
+        ##################################
+
+        # start the target model from the actor model
+        self._qmodel_target.clone( self._qmodel_actor, tau = 1.0 )
+
+        # create the replay buffer
+        if self._usePrioritizedExpReplay :
+            self._rbuffer = prioritybuffer.PriorityBuffer( self._replayBufferSize,
+                                                           self._seed )
+        else :
+            self._rbuffer = replaybuffer.DqnReplayBuffer( self._replayBufferSize,
+                                                          self._seed )
+
+```
+
+* The [**act**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L127) 
+  method is in charge of deciding which action to take in a given state.
+
+```python
+    def act( self, state, inference = False ) :
+        """Returns an action to take from the given state
+
+        Args:
+            state (object)    : state|observation coming from the simulator
+            inference (bool)  : whether or not we are in inference mode
+
+        Returns:
+            int : action to take (assuming discrete actions space)
+
+        """
+
+        if inference or np.random.rand() > self._epsilon :
+            return np.argmax( self._qmodel_actor.eval( self._preprocess( state ) ) )
+        else :
+            return np.random.choice( self._nActions )
+```
+
+* The [**step**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L148)
+  method implements most of the control flow of the DQN algorithm.
+
+```python
+    def step( self, transition ) :
+        """Does one step of the learning algorithm, from Mnih et. al.
+           https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+
+        """
+        
+        # grab information from this transition
+        _s, _a, _snext, _r, _done = transition
+        # preprocess the raw state
+        self._nextState = self._preprocess( _snext )
+        if self._currState is None :
+            self._currState = self._preprocess( _s ) # for first step
+        # store in replay buffer
+        self._rbuffer.add( self._currState, _a, self._nextState, _r, _done )
+
+        # check if can do a training step
+        if self._istep > self._learningStartsAt and \
+           self._istep % self._learningUpdateFreq == 0 and \
+           len( self._rbuffer ) >= self._minibatchSize :
+            self._learn()
+
+        # update the parameters of the target model (every update_target steps)
+        if self._istep > self._learningStartsAt and \
+           self._istep % self._learningUpdateTargetFreq == 0 :
+           self._qmodel_target.clone( self._qmodel_actor, tau = self._tau )
+
+        # save next state (where we currently are in the environment) as current
+        self._currState = self._nextState
+
+        # update the agent's step counter
+        self._istep += 1
+        # and the episode counter if we finished an episode, and ...
+        # the states as well (I had a bug here, becasue I didn't ...
+        # reset the states).
+        if _done :
+            self._iepisode += 1
+            self._currState = None
+            self._nextState = None
+
+        # check epsilon update schedule and update accordingly
+        if self._epsSchedule == 'linear' :
+            # update epsilon using linear schedule
+            _epsFactor = 1. - ( max( 0, self._istep - self._learningStartsAt ) / self._epsSteps )
+            _epsDelta = max( 0, ( self._epsStart - self._epsEnd ) * _epsFactor )
+            self._epsilon = self._epsEnd + _epsDelta
+
+        elif self._epsSchedule == 'geometric' :
+            if _done :
+                # update epsilon with a geometric decay given by a decay factor
+                _epsFactor = self._epsDecay if self._istep >= self._learningStartsAt else 1.0
+                self._epsilon = max( self._epsEnd, self._epsilon * _epsFactor )
+```
+
+* The [**_preprocess**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L200)
+  method
+
+```python
+    def _preprocess( self, rawState ) :
+        """Preprocess a raw state into an appropriate state representation
+    
+        Args:
+            rawState (np.ndarray) : raw state to be transformed
+
+        Returns:
+            np.ndarray : preprocess state into the approrpiate representation
+        """
+
+        """ OVERRIDE this method with your specific preprocessing """
+
+        raise NotImplementedError( 'IDqnAgent::_preprocess> virtual method' )
+```
+
+* The [**_learn**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L214)
+  method
+
+```python
+    def _learn( self ) :
+        """Makes a learning step using the DQN algorithm from Mnih et. al.
+           https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+
+        """
+
+        # get a minibatch from the replay buffer
+        _minibatch = self._rbuffer.sample( self._minibatchSize )
+        _states, _actions, _nextStates, _rewards, _dones = _minibatch
+
+        # compute targets using the target network in a "vectorized" way
+        _qtargets = _rewards + ( 1 - _dones ) * self._gamma * \
+                    np.max( self._qmodel_target.eval( _nextStates ), 1 )
+
+        # casting to float32 (to avoid errors due different tensor types)
+        _qtargets = _qtargets.astype( np.float32 )
+
+        # make the learning call to the model (kind of like supervised setting)
+        self._qmodel_actor.train( _states, _actions, _qtargets )
+```
+
+### Model interface
+
+
 
 ### 4.5 Considerations and tradeoffs
 
@@ -913,6 +1224,10 @@ class that inherits from this interface has to implement the **preprocess** meth
   Besides, I'd argue that debugging issues using **pdb** (or in worst cases using **code**)
   is way easier and better than using a notebook. I'd suggest you give it a try as well,
   by running your scripts in *debug* mode, as shown below.
+
+* I'd argue that this could improve reproducibility, as we will not couple some parts of our
+  algorithm to some specific backend or library, which could potentially help us analyze
+  with a common ground various algorithms.
 
   ```python
   python -mpdb MY_AWESOME_FUNKY_SCRIPT.py <PARAMS>
