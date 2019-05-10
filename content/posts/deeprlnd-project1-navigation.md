@@ -779,7 +779,8 @@ mind, recall good and bad experiences and don't forget to live with a little bit
 
 Finally, by integrating all the previous improvements (Experience replay and Fixed
 targets) we get the complete version of the DQN algorithm from [2]. Below we show
-the algorithm modified to use soft-udpates.
+a modified version of the algorithm from [2] that uses soft-udpates instead of
+regular updates.
 
 > **Deep-Q Learning with Experience Replay and Soft updates**
 > * Initialize action-value function \\( Q \\) with parameters \\( \theta \\)
@@ -808,7 +809,114 @@ the algorithm modified to use soft-udpates.
 >           $$
 >     * Anneal \\( \epsilon \\) using a specified schedule
 
+Below are some key aspects to take into consideration:
+
+### **Preprocessing** \\( \phi_{t} = \phi( s_{t} ) \\): 
+  This step consist in converting the states|observations \\( s_{t} \\) received 
+  from the simulator into an appropriate state representation that can be used 
+  by our action-value network \\( Q(\phi_{t},a_{t};\theta) \\). We usually receive 
+  observations from the environment which in some cases (if we are lucky) consist 
+  of the actual internal state representation of the world. Unfortunately, in 
+  most cases we only receive observations that do not permit to fully recover the 
+  internal state of the environment. To avoid this issue we can design a state
+  representation from these observations that would push us a bit more into the MDP
+  setting and not the POMDP setting (Partially Observable MDP). In [2] the authors
+  designed a state representation from the raw frame observations from the simulator
+  by stacking a group of 4 consecutive frames, which tries to help encode a bit of
+  temporal information (like speed and movement in the scene). This step is problem
+  specific, and in our Banana collector case we chose to use the direct observations
+  as state representation, although we could have made modifications to add more temporal
+  information which could help with the problem of *state aliasing*. For further information
+  on this topic you can watch part of [this](https://youtu.be/yPMkX_6-ESE?t=230) lecture from [7].
+
+### **Grounding terminal estimates** : 
+  Grounding the estimates for terminal states is important because we don't want
+  to grant an estimate to the value for a terminal state bigger than what it could
+  actually be. If we are just one step away of a terminal state, the  our trajectories
+  have length one and the return we obtain is actually only that reward. All previous 
+  algorithms do a check of whether or not a state is terminal in order to compute 
+  the appropriate TD-target. However, in tabular Q-learning you will find that in some 
+  implementations (unlike the one we presented earliear) there is no check similar to 
+  this one, but instead the entries of the Q-table are set to zeros for the terminal states, 
+  which is effectively the same as doing this check, as shown in the equation below:
+
+  $$
+  TD_{target} = r + \gamma \max_{a'}Q(s_{terminal}^{'},a') = r + \gamma max_{a'}0_{\vert \mathbb{A} \vert} = r
+  $$
+
+  Unfortunaly, because we are dealing with function approximation, the estimates
+  for a terminal states if evaluated will not return always zero, even if we initialize
+  the function approximator to output zeros everywhere (like initializing the weights
+  of a neural network to all zeros). This is caused by the fact that changes in the
+  approximator parameters will affect the values of nearby states-action pairs in
+  state-action space as well even in the slightest. For further information, you could
+  check [this](https://youtu.be/fevMOp5TDQs?t=137) lecture by Volodymyr Mnih from [9].
+  So, keep this in mind when implementing your own version of DQN, as you might run 
+  into subtle bugs in your implementations.
+
+### **Exploration schedule** :
+  Another important detail to keep in mind is the amount of exploration allowed
+  by our \\( \epsilon \\)-greedy mechanism, and how we reduce it as learning progresses.
+  This aspect is not only important in this context of function approximation, but in
+  general as it's a key tradeoff to take into account (exploration v.s. exploitation dilemma).
+  They idea is to give the agent a big enough number of steps to explore and get experiences
+  that actually land some diverse good and bad returns, and then start reducing this
+  ammount of exploration as learning progresses towards convergence. The mechanism
+  used in [2] is to *linearly* decay \\( \epsilon = 1.0 \rightarrow 0.1 \\). Another
+  method would be to decay it *exponentially* by multiplying \\( \epsilon \\) with a 
+  constant decay factor every episode. For further information you could check
+  [this](https://youtu.be/0g4j2k_Ggc4?t=805) lecture by David Silver from [6].
+
 ## 4. DQN Implementation
+
+At last, in this section we will cover the full implementation of the DQN algorithm
+from [2] that uses soft-updates. This implementation is based on the DQN implementation
+from Deepmind (written in Torch and Lua), which can be found [here](https://sites.google.com/a/deepmind.com/dqn/).
+Our implementation tried to decouple the key aspects of the algorithm from the model 
+itself in a kind of library-agnostic way (effectively decoupling the RL part from
+the DL part). At the end of this section we will add some considerations we made 
+for our implementation.
+
+### 4.1 Interfaces
+
+We first implement various interfaces for all components of our DQN algorithm :
+
+* **Agent Interface**
+* **Model Interface**
+* **Memory Interface**
+* **Trainer**
+
+* **Agent interface**: has the implemented steps of the DQN algorithm. This has as
+  components the model and the memory, and queries it as it requires.
+
+* **Model interface**: has the interface for the required functionality of the
+  models.
+
+### Agent interface
+
+This interface has the implementation of the steps in the DQN algorithm, and has
+as components the model and the memory in order to query them as needed. This is
+an "Abstract Class" in the sense that it shouldn't be instantiated. Instead, a specific
+class that inherits from this interface has to implement the **preprocess** method.
+
+### 4.5 Considerations and tradeoffs
+
+* **Why not directly couple everything? Isn't this faster?**: Well, parts that could
+  benefit from coupling would be sections that make cpu-gpu transfers. The only section
+  so far that could benefit would be the target calculations. We could actually write
+  lots of ops (in tensorflow) for the whole TD-target calculation and training all in
+  one pass, or avoid making copies from gpu to cpu from pytorch tensors, but still
+
+
+* **Why not everything in a notebook?**: Well, that's not my style. I've used jupyter
+  notebooks for experiments, but for the full code I don't think they are appropriate.
+  Besides, I'd argue that debugging issues using **pdb** (or in worst cases using **code**)
+  is way easier and better than using a notebook. I'd suggest you give it a try as well,
+  by running your scripts in *debug* mode, as shown below.
+
+  ```python
+  python -mpdb MY_AWESOME_FUNKY_SCRIPT.py <PARAMS>
+  ```
 
 ## 5. Hyperparameters selection
 
@@ -832,3 +940,4 @@ the algorithm modified to use soft-udpates.
 * [6] [*UCL RL course, by David Silver*](https://www.youtube.com/playlist?list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ)
 * [7] [UC Berkeley DeepRL course by Sergey Levine](http://rail.eecs.berkeley.edu/deeprlcourse/)
 * [8] [Udacity DeepRL Nanodegree](https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893)
+* [9] [DeepRL bootcamp](https://sites.google.com/view/deep-rl-bootcamp/lectures)
