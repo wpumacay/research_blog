@@ -713,9 +713,43 @@ Figure 13 below.
 ### 3.5.3 DQN: Fixed Targets
 
 During training we are using the TD-target as the estimate of the true q-values
-that our Q-network should output for a specific pair \\( (s,a) \\). Unfortunately,
-this estimate is also being computed using the Q-network which effectively is forcing
-us to follow a moving target.
+that our Q-network should output for a specific pair \\( (s,a) \\) (as shown in 
+the equation below). Unfortunately, this estimate is being computed using the current
+parameters of the Q-network which effectively is forcing us to follow a moving target.
+Besides, this is not mathematically correct, as we assumed these "true q-values" were
+not dependent on \\( \theta \\) (recall we did not take the gradient of this term).
+
+$$
+\theta := \theta + \alpha ( \overbrace{r + \max_{a'}Q(s',a';\theta)}^{\text{Computed with $\theta$}} - Q(s,a;\theta) ) \overbrace{\nabla_{\theta}Q_{\theta}\vert_{(s,a)}}^{\text{Computed with $\theta$}}
+$$
+
+To help training stability the authors of [2] introduced the use of a separate
+network to compute these targets called a **Target Network**, which is almost the same as
+the network used for taking actions. The key difference is that **the weights of 
+this network are only copied from the weights of the other network after some specific
+number of steps**. Therefore, the update rule can be modified as follows :
+
+$$
+\theta := \theta + \alpha ( \overbrace{r + \max_{a'}\underbrace{Q(s',a';\theta^{-})}_{\text{Target-network}}}^{\text{Computed with $\theta^{-}$}} - Q(s,a;\theta) ) \overbrace{\nabla_{\theta}Q_{\theta}\vert_{(s,a)}}^{\text{Computed with $\theta$}}
+$$
+
+A slight variation to this update at constant intervals is to do updates every time
+step using interpolations, as shown in the following equation :
+
+$$
+\theta^{-} := (1 - \tau) \theta^{-} + \tau \theta
+$$
+
+This are called soft-updates, and by adjusting the factor \\( \tau \\) (to some small 
+values) we get a similar effect of copying the weights of the networks after a fixed
+number of steps. The difference is that, as the name suggests, these updates are less
+jumpy than the hard-updates made by copying entirely the weights of the network. At convergence,
+this update is very similar to a hard-update as the network weights do not change too much.
+
+{{<figure src="/imgs/img_dqn_soft_updates.png" alt="fig-dqn-soft-updates" position="center" 
+    caption="Figure 14. Soft updates v.s. Hard-updates to the weights of a target network" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
 
 ### 3.5.4 Sidenote: on the intuition behind issues with correlations
 
@@ -740,6 +774,8 @@ this to infer even more knowledge that reinforces these opinions, we will then f
 into a vicious cycle of unstable learning. If that is the case in life, keep an open
 mind, recall good and bad experiences and don't forget to live with a little bit of 
 \\( \epsilon \\) here and there :wink:.
+
+
 
 ### 3.5.4 DQN: Putting it all together
 
