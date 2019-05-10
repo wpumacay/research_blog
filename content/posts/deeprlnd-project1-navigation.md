@@ -775,9 +775,38 @@ into a vicious cycle of unstable learning. If that is the case in life, keep an 
 mind, recall good and bad experiences and don't forget to live with a little bit of 
 \\( \epsilon \\) here and there :wink:.
 
-
-
 ### 3.5.4 DQN: Putting it all together
+
+Finally, by integrating all the previous improvements (Experience replay and Fixed
+targets) we get the complete version of the DQN algorithm from [2]. Below we show
+the algorithm modified to use soft-udpates.
+
+> **Deep-Q Learning with Experience Replay and Soft updates**
+> * Initialize action-value function \\( Q \\) with parameters \\( \theta \\)
+> * Initialize target action-value function \\( \hat Q \\) with parameters \\( \theta^{-} = \theta \\)
+> * Initialize replay memory \\( D \\) to a certain capacity
+>
+> * For $$episode = 0,1,2, \dots $$
+>     * Sample initial state \\( s_{0} \\) from the starting distribution
+>     * Preprocess: \\( \phi_{0} = \phi( s_{0} ) \\)
+>     * For $$ t = 0,1,2, \dots $$
+>         * Select \\( a_{t} \\) from \\( \phi_{t} \\) using e-greedy from \\( Q_{\theta} \\)
+>         * Execute action \\( a_{t} \\) in the environment, and receive reward \\( r_{t+1} \\) and next state \\( s_{t+1} \\)
+>         * Preprocess: \\( \phi_{t+1} = \phi( s_{t+1} ) \\)
+>         * Store transition in replay buffer: \\( (\phi_{t},a_{t},r_{t+1},\phi_{t+1}) \rightarrow D \\)
+>         * Every \\( T \\) steps (training session):
+>             * Sample a minibatch $$\left \{ (\phi_{j}, a_{j}, r_{j+1}, \phi_{j+1}) \right \} \sim D $$
+>             * Set Q-targets: $$\\
+>                    y_{j} = \begin{cases} 
+>                                r_{j+1} &\text{if } \phi_{j+1} \text{ is terminal} \\ 
+>                                r_{j+1} + \gamma \max_{a'} \hat Q(\phi_{j+1},a';\theta^{-}) &\text{otherwise} \end{cases}$$
+>             * Update the action-value network parameters \\( \theta \\) by
+>               taking a step of SGD on \\( (y_{j} - Q(\phi_{j},a_{j};\theta))^{2} \\)
+>         * Update the target action-value network parameters \\( \theta^{-} \\) using soft updates: 
+>           $$\\
+>           \theta^{-} = (1-\alpha)\theta^{-} + \alpha \theta
+>           $$
+>     * Anneal \\( \epsilon \\) using a specified schedule
 
 ## 4. DQN Implementation
 
