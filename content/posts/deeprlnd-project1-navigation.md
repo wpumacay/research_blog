@@ -868,6 +868,66 @@ Below are some key aspects to take into consideration:
   constant decay factor every episode. For further information you could check
   [this](https://youtu.be/0g4j2k_Ggc4?t=805) lecture by David Silver from [6].
 
+### **Choice for \\( Q_{\theta}(s,a) \\)**
+  The last detail is related to the actual choice we make how to model our Q-network.
+  We have two choices: either treat both inputs \\( s,a \\) as a single input \\( (s,a) \\)
+  to the network, which would allows us to compute one q-value for a given state-action 
+  pair, or use \\( s \\) as only input to the network and grab  all the q-values for 
+  all actions \\( a \in \mathbb{A} \\). Both of these options are shown in the figure below.
+  
+{{<figure src="/imgs/img_dqn_qnetwork_choices.png" alt="fig-dqn-qnetwork-choices" position="center" 
+    caption="Figure 15. Q-network choices. Left: A Q-network that outputs one value per state-action pair. Right: A Q-network that outputs all q-values over all actions for a given state" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+  The first option would cost more as we need to compute all q-values in order
+  to grab the maximum of them for both the TD-target calculation and the \\( \epsilon \\)-greedy
+  action selection. The second option was the one used in [2], and it's the one
+  will use for our implementation.
+
+  **Sidenote** : I couldn't help but notice that the cost function would change a bit
+  due to our choice. Recall the loss function we defined for action-value function 
+  approximation:
+
+  $$
+  L(\theta) = \mathbb{E}_{s,a} \left \{ ( Q^{\star}(s,a) - \hat Q_{\theta}(s,a) )^{2} \right \}
+  $$
+
+  If using our choice of network we would have to change the term $$\hat Q_{\theta}(s,a)$$
+  by the term $$\hat Q_{\theta}^{(a)}(s)$$ (or equivalently $$e_{a}^{T} \hat Q_{\theta}(s)$$ if you
+  prefer dot products). Thus, our loss function would change to:
+
+  $$
+  L(\theta) = \mathbb{E}_{s,a} \left \{ ( Q^{\star}(s,a) - \hat Q_{\theta}^{(a)}(s) )^{2} \right \}
+  $$
+
+  Now, if we compute the gradient of this objective w.r.t. \\( \theta \\), after
+  some operations (like in the function approximation derivation from earlier) we 
+  would get the following:
+
+  $$
+  \nabla_{\theta}L = \mathbb{E}_{s,a} \left \{ 2 ( Q^{\star}(s,a) - \hat Q_{\theta}^{(a)}(s) ) \nabla_{\theta} \hat Q_{\theta}^{(a)}(s) \right \}
+  $$
+
+  Or, if using the dot product instead of indexing:
+
+  $$
+  \nabla_{\theta}L = \mathbb{E}_{s,a} \left \{ 2 ( Q^{\star}(s,a) - e_{a}^{T}\hat Q_{\theta}(s) ) \nabla_{\theta} (e_{a}^{T}\hat Q_{\theta}(s)) \right \}
+  $$
+
+  If you expand the later (the gradient of the dot product) you can actually take that
+  constant vector out, and then we would end up with the Jacobian of \\( \hat Q_{\theta}(s) \\).
+  Both are at the end equivalent if you do the algebra, but I wonder how these are implemented
+  by the autodiff. The funny thing is that this was a kind of hidden detail from most
+  resources I found online. So, at first it looks like a linear regression problem (and
+  that's how it should be if we had used the first option for the network instead), but
+  instead it's like a multi-dimensional regression problem but with masks over some dimensions.
+  Hopefully, autodiff handles this subtleties for us :smile:. I'll update this part
+  once I have some more time to get into the inner workings of the autodiff (so far,
+  I was checking the torch's derivatives.yaml file where the gradient definitions are
+  and it seems that the one doing the job might be the *index_select_backward* function
+  when used by the *kthvalue* function, or the function *index_select*, or the function
+  *gather*).
+
 ## 4. DQN Implementation
 
 At last, in this section we will cover the full implementation of the DQN algorithm
@@ -1293,7 +1353,19 @@ class IDqnAgent( object ) :
   [agent_gridworld.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_gridworld.py) and 
   [agent_visual.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_visual.py).
 
-### Model interface
+### Model Interface and Concretions
+
+This interface abstracts away the required functionality that the agent interface
+needs from a model, regardless of the specific Deep Learning library used. Unlike
+the agent interface, which has some base code common to all agent types, this model
+interface has no common code implementation, apart from some getters (as you can see
+in the snippet below). The descriptions of all virtual methods that the backend-specific
+models have to implement are :
+
+* **build** : build the architecture of the model (either using keras or torch.nn).
+* **eval**  : computes all q-values for a given state doing a forward pass.
+* **train** : performs SGD (or some other optimizer) with the TD-targets as true q-values to fit.
+* **clone** : implements soft-updates from another IDqnModel
 
 ```python
 class IDqnModel( object ) :
@@ -1311,7 +1383,7 @@ class IDqnModel( object ) :
     def eval( self, state ) :
         raise NotImplementedError( 'IDqnModel::eval> virtual method' )
 
-    def train( self, states, actions, targets, impSampWeights = None ) :
+    def train( self, states, actions, targets ) :
         raise NotImplementedError( 'IDqnModel::train> virtual method' )
 
     def clone( self, other, tau = 1.0 ) :
@@ -1351,7 +1423,16 @@ class IDqnModel( object ) :
         return self._bellmanErrors
 ```
 
-* The pytorch model
+* The [**model_pytorch.py**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/model_pytorch.py)
+  file contains a concrete implementation of the model interface using Pytorch
+  as Deep Learning library. Below there is a snippet with most of the contents of
+  this file. The **DqnModelPytorch** class serves as a proxy for the actual network
+  implemented in a standard way using the **torch.nn** and the **torch.nn.Module**
+  class. Recall that the **eval** method is used for two purposes: computing the q-values
+  for the action decision, and computing the q-targets for learning. We have to make
+  sure this evaluation **is not considered** for gradients computations, so we use 
+  [torch.no_grad](https://pytorch.org/docs/stable/autograd.html#torch.autograd.no_grad)
+  to ensure this requirement.
 
 ```python
 class NetworkPytorchCustom( nn.Module ) :
