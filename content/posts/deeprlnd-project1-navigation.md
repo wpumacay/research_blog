@@ -127,7 +127,7 @@ agent.
 
 #### **Note**
 
-This actions are applicable again only for our custom build, as the original
+These actions are applicable again only for our custom build, as the original
 environment from ML-Agents has even more actions, using action tables (newer API).
 This newer API accepts in most of the cases a tuple or list for the actions, with
 each entry representing corresponding to a specific action table (a nested set of
@@ -427,8 +427,9 @@ Value based methods are based on the **Bellman Equations**, which specify what t
 optimal state-value and action-value functions should satisfy in order to be optimal.
 Below we show the **Bellman Optimality Equation** for \\( Q^{\star} \\), and the solution 
 \\( Q^{\star} \\) of this equation is a fixed point that can be computed exactly using
-*Dynamic Drogramming* (if a model of the environment is known) or with *Monte Carlo* and
-*Temporal Difference* methods (if no model of the environment is available).
+*Dynamic Drogramming* (if a model of the environment is known) or approximately 
+with *Monte Carlo* and *Temporal Difference* methods (if no model of the environment 
+is available).
 
 $$
 Q^{\star}(s,a) = \mathbb{E}_{(s,a,s',r)} \left \{ r + \gamma \max_{a'} Q^{\star}(s',a') \right \}
@@ -443,7 +444,7 @@ $$
 Q(s,a) := \overbrace{Q(s,a)}^{\text{Current estimate}} + \alpha ( \overbrace{r + \gamma \max_{a'} Q(s',a')}^{\text{"Better" estimate}} - Q(s,a) )
 $$
 
-This update rule is used in the **tabular case**, which is used when dealing discrete state
+This update rule is used in the **tabular case**, which is used when dealing with discrete state
 and action spaces. These cases allow to easily represent the action-value function in
 a table (numpy array or dictionary), and update each entry of this table separately.
 
@@ -474,7 +475,7 @@ consists of updating the estimate of the q-value \\( Q(s,a) \\) for the state-ac
 pair \\( (s,a) \\) from another estimate of the true q-value of the optimal policy given by 
 \\( r + \gamma \max_{a'} Q(s',a') \\) called the **TD-Target**.
 
-> **Q-learning (off-policy TD control**
+> **Q-learning (off-policy TD control)**
 > * Algorithm parameters: step size \\( \alpha \in [0,1] \\), small \\( \epsilon \gt 0 \\)
 > * Initialize q-table \\( Q(s,a) \\) for all \\( s \in \mathbb{S}, a \in \mathbb{A} \\)
 >
@@ -527,7 +528,7 @@ def qlearning( env, Q, eps, alpha, gamma, numEpisodes, maxStepsPerEpisode ) :
       _s = _snext
 ```
 
-For further information about Q-learning you can check resources from [4,5,6]
+For further information about Q-learning you can check the resources from [4,5,6]
 
 ### 3.4 Function approximation
 
@@ -877,6 +878,12 @@ itself in a kind of library-agnostic way (effectively decoupling the RL part fro
 the DL part). At the end of this section we will add some considerations we made 
 for our implementation.
 
+**Disclaimer**: the trained model has not been tested in the Bnana-Visual environment,
+which provides as observations frames instead of the vector observations discussed
+earlier. There might be some code that related to the visual case which I'd been
+tested, but I'm still debugging it. I'll update this post with the visual case as well
+once I have it working properly.
+
 ### 4.1 Interfaces amd Concretions
 
 Our implementation makes use of abstractions and decoupling, as we implemented 
@@ -925,7 +932,9 @@ file in the **dqn/core** folder of the navigation package.
 The key methods to be considered are the **__init__**, **act**, **step**, **_preprocess** 
 and **_learn** methods, which implement most of the required steps of the DQN algorithm.
 We will discuss some of the details of these in snippets below, and encourage to
-look at the full implementation using the hyperlinks provided.
+look at the full implementation using the hyperlinks provided. Some might have
+some details removed (like dev. changes during testing), so they might look a bit
+different than the originals from the repo.
 
 ```python
 
@@ -1038,10 +1047,11 @@ class IDqnAgent( object ) :
 
 * First we have the [**\_\_init\_\_**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L13) 
   method, whose implementation is shown briefly in the snippet below. This is the
-  constructor of our agent and is in charge of copy the hyperparameters from the
+  constructor of our agent and is in charge of copying the hyperparameters from the
   passed configuration objects, create the models (action-value and target action-value
   networks), create the replay buffer (or a priority-based replay buffer if requested) 
-  and some other initialization stuff.
+  and some other initialization stuff. We get around having to decouple the specific 
+  model creation code by passing a factory method that takes care of this.
 
 ```python
     def __init__( self, agentConfig, modelConfig, modelBuilder, backendInitializer ) :
@@ -1084,7 +1094,12 @@ class IDqnAgent( object ) :
 ```
 
 * The [**act**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L127) 
-  method is in charge of deciding which action to take in a given state.
+  method is in charge of deciding which action to take in a given state. This takes
+  care of both the case of doing \\( \epsilon \\)-greedy during training, and taking
+  only the greedy action during inference. Note that in order to take the greedy
+  actions we query the action-value network with the appropriate state representation
+  in order to get the Q-values required to apply the \\( \argmax \\) function
+
 
 ```python
     def act( self, state, inference = False ) :
@@ -1106,7 +1121,11 @@ class IDqnAgent( object ) :
 ```
 
 * The [**step**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L148)
-  method implements most of the control flow of the DQN algorithm.
+  method implements most of the control flow of the DQN algorithm like adding experience 
+  tuples to the replay buffer, doing training every few steps (given by a frequency 
+  hyperparameter), doing copies of weights (or soft-updates) to the target network 
+  every few steps, doing some book keeping of the states, and applying the schedule
+  to \\( \epsilon \\) to control the ammount of exploration.
 
 ```python
     def step( self, transition ) :
@@ -1163,7 +1182,13 @@ class IDqnAgent( object ) :
 ```
 
 * The [**_preprocess**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L200)
-  method
+  (as mentioned earlier) is a virtual method that has to be implemented by the
+  actual concretions. It receives the observations from the simulator and returns
+  the appropriate state representation to use. Some sample implementations for the
+  [BananaSimple-agent](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_raycast.py#L14), 
+  [BananaVisual-agent](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_gridworld.py#L14) and 
+  [Gridworld-agent](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_visual.py#L21) 
+  are shown in the snippets that follow.
 
 ```python
     def _preprocess( self, rawState ) :
@@ -1181,8 +1206,64 @@ class IDqnAgent( object ) :
         raise NotImplementedError( 'IDqnAgent::_preprocess> virtual method' )
 ```
 
+```python
+    ###############################################
+    ## Simple (just copy) preprocessing          ##
+    ###############################################
+
+    def _preprocess( self, rawState ) :
+        # rawState is a vector-observation, so just copy it
+        return rawState.copy()
+```
+
+```python
+    ###############################################
+    ## One-hot encoding preprocessing            ##
+    ###############################################
+
+    def _preprocess( self, rawState ) :
+        # rawState is an index, so convert it to a one-hot representation
+        _stateOneHot = np.zeros( self._stateDim )
+        _stateOneHot[rawState] = 1.0
+
+        return _stateOneHot
+```
+
+```python
+    ################################################
+    ##  Stack 4 frames into vol. preprocessing    ##
+    ################################################
+
+    def _preprocess( self, rawState ) :
+        # if queue is empty, just repeat this rawState -------------------------
+        if len( self._frames ) < 1 :
+            for _ in range( 4 ) :
+                self._frames.append( rawState )
+        # ----------------------------------------------------------------------
+
+        # send this rawState to the queue
+        self._frames.append( rawState )
+
+        # grab the states to be preprocessed
+        _frames = list( self._frames )
+
+        if USE_GRAYSCALE :
+            # convert each frame into grayscale
+            _frames = [ 0.299 * rgb[0,...] + 0.587 * rgb[1,...] + 0.114 * rgb[2,...] \
+                        for rgb in _frames ]
+            _frames = np.stack( _frames )
+
+        else :
+            _frames = np.concatenate( _frames )
+
+        return _frames
+```
+
 * The [**_learn**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L214)
-  method
+  method is the one in charge doing the actual training. As explained in the algorithm
+  we first sample a minibatch from the replay buffer, compute the TD-targets (in a
+  vectorized way) and request a step of SGD using the just computed TD-targets and 
+  the experiences in the minibatch.
 
 ```python
     def _learn( self ) :
@@ -1206,8 +1287,381 @@ class IDqnAgent( object ) :
         self._qmodel_actor.train( _states, _actions, _qtargets )
 ```
 
+* Finally, there are some specific concretions of this interface (as we mentioned
+  earlier). We already showed the required implementation of the **_preprocess**
+  method but, for completeness, you can find these concretions in the [agent_raycast.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_raycast.py)
+  [agent_gridworld.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_gridworld.py) and 
+  [agent_visual.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_visual.py).
+
 ### Model interface
 
+```python
+class IDqnModel( object ) :
+
+    def __init__( self, name, modelConfig, trainable ) :
+        super( IDqnModel, self ).__init__()
+
+        ##################################
+        ##   COPY CONFIGURATION DATA    ##
+        ##################################
+
+    def build( self ) :
+        raise NotImplementedError( 'IDqnModel::build> virtual method' )
+
+    def eval( self, state ) :
+        raise NotImplementedError( 'IDqnModel::eval> virtual method' )
+
+    def train( self, states, actions, targets, impSampWeights = None ) :
+        raise NotImplementedError( 'IDqnModel::train> virtual method' )
+
+    def clone( self, other, tau = 1.0 ) :
+        raise NotImplementedError( 'IDqnModel::clone> virtual method' )
+
+    def save( self, filename ) :
+        raise NotImplementedError( 'IDqnModel::save> virtual method' )
+
+    def load( self, filename ) :
+        raise NotImplementedError( 'IDqnModel::load> virtual method' )
+
+    def initialize( self, args ) :
+        raise NotImplementedError( 'IDqnModel::initialize> virtual method' )
+
+    @property
+    def losses( self ) :
+        return self._losses
+
+    @property
+    def name( self ) :
+        return self._name
+
+    @property
+    def trainable( self ) :
+        return self._trainable
+
+    @property
+    def useImpSampling( self ) :
+        return self._useImpSampling
+
+    @property
+    def gradients( self ) :
+        return self._gradients
+
+    @property
+    def bellmanErrors( self ) :
+        return self._bellmanErrors
+```
+
+* The pytorch model
+
+```python
+class NetworkPytorchCustom( nn.Module ) :
+
+    def __init__( self, inputShape, outputShape, layersDefs ) :
+        super( NetworkPytorchCustom, self ).__init__()
+
+        # banana-raycast has a 37-vector as an observation (rank-1 tensor)
+        assert len( inputShape ) == 1, 'ERROR> input should be a rank-1 tensor'
+        # and also has a discrete set of actions, with a 4-vector for its qvalues
+        assert len( outputShape ) == 1, 'ERROR> output should be rank-1 tensor'
+
+        self._inputShape = inputShape
+        self._outputShape = outputShape
+
+        # define layers for this network
+        self.fc1 = nn.Linear( self._inputShape[0], 128 )
+        self.fc2 = nn.Linear( 128, 64 )
+        self.fc3 = nn.Linear( 64, 16 )
+        self.fc4 = nn.Linear( 16, self._outputShape[0] )
+
+        self.h1 = None
+        self.h2 = None
+        self.h3 = None
+        self.out = None
+
+    def forward( self, X ) :
+        self.h1 = F.relu( self.fc1( X ) )
+        self.h2 = F.relu( self.fc2( self.h1 ) )
+        self.h3 = F.relu( self.fc3( self.h2 ) )
+
+        self.out = self.fc4( self.h3 )
+
+        return self.out
+
+    def clone( self, other, tau ) :
+        for _thisParams, _otherParams in zip( self.parameters(), other.parameters() ) :
+            _thisParams.data.copy_( ( 1. - tau ) * _thisParams.data + ( tau ) * _otherParams.data )
+
+class DqnModelPytorch( model.IDqnModel ) :
+
+    def __init__( self, name, modelConfig, trainable ) :
+        super( DqnModelPytorch, self ).__init__( name, modelConfig, trainable )
+
+    def build( self ) :
+        self._nnetwork = NetworkPytorchCustom( self._inputShape,
+                                               self._outputShape,
+                                               self._layersDefs )
+
+    def initialize( self, args ) :
+        # grab current pytorch device
+        self._device = args['device']
+        # send network to device
+        self._nnetwork.to( self._device )
+        # create train functionality if necessary
+        if self._trainable :
+            self._lossFcn = nn.MSELoss()
+            self._optimizer = optim.Adam( self._nnetwork.parameters(), lr = self._lr )
+
+    def eval( self, state, inference = False ) :
+        _xx = torch.from_numpy( state ).float().to( self._device )
+
+        self._nnetwork.eval()
+        with torch.no_grad() :
+            _qvalues = self._nnetwork( _xx ).cpu().data.numpy()
+        self._nnetwork.train()
+
+        return _qvalues
+
+    def train( self, states, actions, targets, impSampWeights = None ) :
+        if not self._trainable :
+            print( 'WARNING> tried training a non-trainable model' )
+            return None
+        
+        _aa = torch.from_numpy( actions ).unsqueeze( 1 ).to( self._device )
+        _xx = torch.from_numpy( states ).float().to( self._device )
+        _yy = torch.from_numpy( targets ).float().unsqueeze( 1 ).to( self._device )
+
+        # reset the gradients buffer
+        self._optimizer.zero_grad()
+    
+        # do forward pass to compute q-target predictions
+        _yyhat = self._nnetwork( _xx ).gather( 1, _aa )
+    
+        # and compute loss and gradients
+        _loss = self._lossFcn( _yyhat, _yy )
+        _loss.backward()
+
+        # compute bellman errors (either for saving or for prioritized exp. replay)
+        with torch.no_grad() :
+            _absBellmanErrors = torch.abs( _yy - _yyhat ).cpu().numpy()
+    
+        # run optimizer to update the weights
+        self._optimizer.step()
+    
+        # grab loss for later saving
+        self._losses.append( _loss.item() )
+
+        return _absBellmanErrors
+
+    def clone( self, other, tau = 1.0 ) :
+        self._nnetwork.clone( other._nnetwork, tau )
+
+    def save( self, filename ) :
+        if self._nnetwork :
+            torch.save( self._nnetwork.state_dict(), filename )
+
+    def load( self, filename ) :
+        if self._nnetwork :
+            self._nnetwork.load_state_dict( torch.load( filename ) )
+```
+
+* The tensorflow model
+
+```python
+def createNetworkCustom( inputShape, outputShape, layersDefs ) :
+    # vector as an observation (rank-1 tensor)
+    assert len( inputShape ) == 1, 'ERROR> input should be a rank-1 tensor'
+    # and also discrete actions , with a 4-vector for its qvalues
+    assert len( outputShape ) == 1, 'ERROR> output should be rank-1 tensor'
+
+    # keep things simple (use keras for core model definition)
+    _networkOps = keras.Sequential()
+
+    # define initializers
+    _kernelInitializer = keras.initializers.glorot_normal( seed = 0 )
+    _biasInitializer = keras.initializers.Zeros()
+
+    # add the layers for our test-case
+    _networkOps.add( keras.layers.Dense( 128, activation = 'relu', input_shape = inputShape, kernel_initializer = _kernelInitializer, bias_initializer = _biasInitializer ) )
+    _networkOps.add( keras.layers.Dense( 64, activation = 'relu', kernel_initializer = _kernelInitializer, bias_initializer = _biasInitializer ) )
+    _networkOps.add( keras.layers.Dense( 16, activation = 'relu', kernel_initializer = _kernelInitializer, bias_initializer = _biasInitializer ) )
+    _networkOps.add( keras.layers.Dense( outputShape[0], kernel_initializer = _kernelInitializer, bias_initializer = _biasInitializer ) )
+
+    return _networkOps
+
+class DqnModelTensorflow( model.IDqnModel ) :
+
+    def __init__( self, name, modelConfig, trainable ) :
+        super( DqnModelTensorflow, self ).__init__( name, modelConfig, trainable )
+
+    def build( self ) :
+        # placeholder for state inputs
+        self._tfStates = tf.placeholder( tf.float32, (None,) + self._inputShape )
+
+        # create the nnetwork model architecture
+        self._nnetwork = createNetworkCustom( self._inputShape,
+                                              self._outputShape,
+                                              self._layersDefs )
+        
+        # create the ops for evaluating the output of the model (Q(s,:))
+        self._opQhat_s = self._nnetwork( self._tfStates )
+
+        # if trainable (action network), create the full resources
+        if self._trainable :
+            # placeholders: actions, act-indices (gather), and computed q-targets
+            self._tfActions             = tf.placeholder( tf.int32, (None,) )
+            self._tfActionsIndices      = tf.placeholder( tf.int32, (None,) )
+            self._tfQTargets            = tf.placeholder( tf.float32, (None,) )
+
+            # @TODO|CHECK: Change the gather call by multiply + one-hot
+            # create the ops for getting the Q(s,a) for each batch of (states) + (actions)
+            # using tf.gather_nd, and expanding action indices with batch indices
+            self._opActionsWithIndices = tf.stack( [self._tfActionsIndices, self._tfActions], axis = 1 )
+            self._opQhat_sa = tf.gather_nd( self._opQhat_s, self._opActionsWithIndices )
+    
+            # create ops for the loss function
+            self._opLoss = tf.losses.mean_squared_error( self._tfQTargets, self._opQhat_sa )
+    
+            # create ops for the loss and optimizer
+            self._optimizer = tf.train.AdamOptimizer( learning_rate = self._lr )
+            self._opOptim = self._optimizer.minimize( self._opLoss, var_list = self._nnetwork.trainable_weights )
+
+        # tf.Session, passed by the backend-initializer
+        self._sess = None
+
+    def initialize( self, args ) :
+        # grab session and initialize
+        self._sess = args['session']
+
+    def eval( self, state, inference = False ) :
+        # unsqueeze if it's not a batch
+        _batchStates = [state] if state.ndim == 1 else state
+        _qvalues = self._sess.run( self._opQhat_s, feed_dict = { self._tfStates : _batchStates } )
+
+        return _qvalues
+
+    def train( self, states, actions, targets, impSampWeights = None ) :
+        if not self._trainable :
+            print( 'WARNING> tried training a non-trainable model' )
+            return None
+        
+        # for gather functionality
+        _actionsIndices = np.arange( actions.shape[0] )
+        # dictionary to feed to placeholders
+        _feedDict = { self._tfStates : states,
+                      self._tfActions : actions,
+                      self._tfActionsIndices : _actionsIndices,
+                      self._tfQTargets : targets }
+
+        # run the session
+        _, _loss = self._sess.run( [ self._opOptim, self._opLoss ], _feedDict )
+    
+        # grab loss for later statistics
+        self._losses.append( _loss )
+
+    def clone( self, other, tau = 1.0 ) :
+        _srcWeights = self._nnetwork.get_weights()
+        _dstWeights = other._nnetwork.get_weights()
+
+        _weights = []
+        for i in range( len( _srcWeights ) ) :
+            _weights.append( ( 1. - tau ) * _srcWeights[i] + ( tau ) * _dstWeights[i] )
+
+        self._nnetwork.set_weights( _weights )
+
+    def save( self, filename ) :
+        self._nnetwork.save_weights( filename )
+
+    def load( self, filename ) :
+        self._nnetwork.load_weights( filename )
+```
+
+### Memory Interface
+
+* The base interface
+
+```python
+class IBuffer( object ) :
+
+    def __init__( self, bufferSize, randomSeed ) :
+        super( IBuffer, self ).__init__()
+
+        # capacity of the buffer
+        self._bufferSize = bufferSize
+
+        # seed for random number generator (either numpy's or python's)
+        self._randomSeed = randomSeed
+
+    def add( self, state, action, nextState, reward, endFlag ) :
+        """Adds a transition tuple into memory
+        
+        Args:
+            state       (object)    : state at timestep t
+            action      (int)       : action taken at timestep t
+            nextState   (object)    : state from timestep t+1
+            reward      (float)     : reward obtained from (state,action)
+            endFlag     (bool)      : whether or not nextState is terminal
+
+        """
+        raise NotImplementedError( 'IBuffer::add> virtual method' )
+
+    def sample( self, batchSize ) :
+        """Adds a transition tuple into memory
+        
+        Args:
+            batchSize (int) : number of experience tuples to grab from memory
+
+        Returns:
+            list : a list of experience tuples
+
+        """
+        raise NotImplementedError( 'IBuffer::sample> virtual method' )
+
+    def __len__( self ) :
+        raise NotImplementedError( 'IBuffer::__len__> virtual method' )
+```
+
+* The non-prioritized replay buffer
+
+```python
+class DqnReplayBuffer( buffer.IBuffer ) :
+
+    def __init__( self, bufferSize, randomSeed ) :
+        super( DqnReplayBuffer, self ).__init__( bufferSize, randomSeed )
+
+        self._experience = namedtuple( 'Step', 
+                                       field_names = [ 'state', 
+                                                       'action',
+                                                       'reward',
+                                                       'nextState',
+                                                       'endFlag' ] )
+
+        self._memory = deque( maxlen = bufferSize )
+
+        # seed random generator (@TODO: What is the behav. with multi-agents?)
+        random.seed( randomSeed )
+
+    def add( self, state, action, nextState, reward, endFlag ) :
+        # create a experience object from the arguments
+        _expObj = self._experience( state, action, reward, nextState, endFlag )
+        # and add it to the deque memory
+        self._memory.append( _expObj )
+
+    def sample( self, batchSize ) :
+        # grab a batch from the deque memory
+        _expBatch = random.sample( self._memory, batchSize )
+
+        # stack each experience component along batch axis
+        _states = np.stack( [ _exp.state for _exp in _expBatch if _exp is not None ] )
+        _actions = np.stack( [ _exp.action for _exp in _expBatch if _exp is not None ] )
+        _rewards = np.stack( [ _exp.reward for _exp in _expBatch if _exp is not None ] )
+        _nextStates = np.stack( [ _exp.nextState for _exp in _expBatch if _exp is not None ] )
+        _endFlags = np.stack( [ _exp.endFlag for _exp in _expBatch if _exp is not None ] ).astype( np.uint8 )
+
+        return _states, _actions, _nextStates, _rewards, _endFlags
+
+    def __len__( self ) :
+        return len( self._memory )
+```
 
 
 ### 4.5 Considerations and tradeoffs
