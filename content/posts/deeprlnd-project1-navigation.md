@@ -923,10 +923,10 @@ Below are some key aspects to take into consideration:
   instead it's like a multi-dimensional regression problem but with masks over some dimensions.
   Hopefully, autodiff handles this subtleties for us :smile:. I'll update this part
   once I have some more time to get into the inner workings of the autodiff (so far,
-  I was checking the torch's derivatives.yaml file where the gradient definitions are
-  and it seems that the one doing the job might be the *index_select_backward* function
-  when used by the *kthvalue* function, or the function *index_select*, or the function
-  *gather*).
+  I was checking the torch's [derivatives.yaml](https://github.com/pytorch/pytorch/blob/master/tools/autograd/derivatives.yaml) 
+  file where the gradient definitions are and it seems that the one doing the job 
+  might be the *index_select_backward* function when used by the *kthvalue* function, 
+  or the function *index_select*, or the function *gather*).
 
 ## 4. DQN Implementation
 
@@ -1430,9 +1430,13 @@ class IDqnModel( object ) :
   implemented in a standard way using the **torch.nn** and the **torch.nn.Module**
   class. Recall that the **eval** method is used for two purposes: computing the q-values
   for the action decision, and computing the q-targets for learning. We have to make
-  sure this evaluation **is not considered** for gradients computations, so we use 
+  sure this evaluation **is not considered** for gradients computations. We make use of 
   [torch.no_grad](https://pytorch.org/docs/stable/autograd.html#torch.autograd.no_grad)
-  to ensure this requirement.
+  to ensure this requirement.We only have to compute gradients w.r.t. the weights of 
+  the action-value network \\( Q_{\theta} \\) during the training step, which is 
+  done automatically when the computation graph includes it for gradients computation 
+  when calling the network on the inputs $$\left \{ (s,a) \right \}$$ from the minibatch 
+  (see train method).
 
 ```python
 class NetworkPytorchCustom( nn.Module ) :
@@ -1545,7 +1549,21 @@ class DqnModelPytorch( model.IDqnModel ) :
             self._nnetwork.load_state_dict( torch.load( filename ) )
 ```
 
-* The tensorflow model
+* The [**model_tensorflow.py**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/model_tensorflow.py)
+  file contains a concrete implementation of the model interface using Tensorflow
+  as Deep Learning library. Below there is a snippet with most of the contents of
+  this file. The **DqnModelTensorflow** class serves a container for the Tensorflow
+  Ops created for the computation graph that implements the required evaluation and 
+  training steps. For the architecture, instead of creating tf ops for each layer,
+  we decided to just use keras to create the required ops of the q-networks internally
+  (see the *createNetworkCustom* function), and then build on top of them by creating 
+  other ops required for training and evaluation (see the *build* method). Because we
+  are creating a static graph beforehand makes it easier to see where we are going to
+  have gradients being computed and used. If our model has its **_trainable** flag
+  set to false we then just create the required ops for evaluation only (used for
+  computing the TD-targets), whereas if our model is trainable, then we create
+  the full computation graph which goes from inputs (minibatch $$\left \{ (s,a) \right \}$$)
+  to the MSE loss using the estimates from the network and the TD-targets passed for training.
 
 ```python
 def createNetworkCustom( inputShape, outputShape, layersDefs ) :
@@ -1593,8 +1611,8 @@ class DqnModelTensorflow( model.IDqnModel ) :
             self._tfActionsIndices      = tf.placeholder( tf.int32, (None,) )
             self._tfQTargets            = tf.placeholder( tf.float32, (None,) )
 
-            # @TODO|CHECK: Change the gather call by multiply + one-hot
-            # create the ops for getting the Q(s,a) for each batch of (states) + (actions)
+            # @TODO|CHECK: Change the gather call by multiply + one-hot.
+            # Create the ops for getting the Q(s,a) for each batch of (states) + (actions) ...
             # using tf.gather_nd, and expanding action indices with batch indices
             self._opActionsWithIndices = tf.stack( [self._tfActionsIndices, self._tfActions], axis = 1 )
             self._opQhat_sa = tf.gather_nd( self._opQhat_s, self._opActionsWithIndices )
@@ -1656,9 +1674,12 @@ class DqnModelTensorflow( model.IDqnModel ) :
         self._nnetwork.load_weights( filename )
 ```
 
-### Memory Interface
+### Memory Interface anc Concretions
 
-* The base interface
+* The [interface](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/buffer.py) 
+  for the replay buffer is simpler than the other. Basically, we just need a buffer 
+  where to store experience tuples (**add** virtual method) and a way to sample a 
+  small batch of experience tuples (**sample** virtual method).
 
 ```python
 class IBuffer( object ) :
@@ -1701,7 +1722,13 @@ class IBuffer( object ) :
         raise NotImplementedError( 'IBuffer::__len__> virtual method' )
 ```
 
-* The non-prioritized replay buffer
+* The non-prioritized [replay buffer](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/replaybuffer.py) 
+  (as in [2]) is implemented (snippet shown below) using a double ended queue 
+  (**deque** from python's collections module). We also implemented a prioritized 
+  [replay buffer](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/prioritybuffer.py)
+  for Prioritized Experience Replay. This will be discussed in an improvements section
+  later.
+
 
 ```python
 class DqnReplayBuffer( buffer.IBuffer ) :
@@ -1743,7 +1770,6 @@ class DqnReplayBuffer( buffer.IBuffer ) :
     def __len__( self ) :
         return len( self._memory )
 ```
-
 
 ### 4.5 Considerations and tradeoffs
 
