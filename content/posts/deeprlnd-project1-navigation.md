@@ -1,7 +1,7 @@
 ---
 title: "Udacity DeepRL project 1: Navigation"
 date: 2019-05-06T15:35:13-05:00
-draft: true
+draft: false
 math: true
 markup: mmark
 ---
@@ -13,7 +13,7 @@ from the [**Udacity Deep Reinforcement Learning Nanodegree**](https://www.udacit
 which consisted on building a DQN-based agent to navigate and collect bananas
 from the *Banana Collector* environment from [**Unity ML-Agents**](https://github.com/Unity-Technologies/ml-agents).
 
-{{<figure src="/imgs/gif_banana_agent.gif" alt="fig-banana-agent" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/gif_banana_agent.gif" alt="fig-banana-agent" position="center" 
     caption="Figure 1. DQN agent collecting bananas" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -65,7 +65,7 @@ banana or a wall) and also the 7 sensor reading in array form (see the encodings
 shows all but one ray reaching an object and also the 7 sensor readings in array form (see
 the encodings in the 4 first entrines do include the *none found* case for the 4th perception).
 
-{{<figure src="/imgs/img_banana_env_observations.png" alt="fig-banana-agent-ray-observations" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_banana_env_observations.png" alt="fig-banana-agent-ray-observations" position="center" 
     caption="Figure 2. Agent ray-perceptions. a) 7 rays reaching at least one object (banana or wall). b) One rayreaching the max. length before reaching any object" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -121,7 +121,7 @@ actions are the following :
 Figure 3 shows these four actions that conform the discrete action space of the
 agent.
 
-{{<figure src="/imgs/img_banana_env_actions.png" alt="fig-banana-agent-actions" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_banana_env_actions.png" alt="fig-banana-agent-actions" position="center" 
     caption="Figure 3. Agent actions." captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -267,7 +267,7 @@ interacting with an environment by applying some **action** \\( A_{t} \\).
 Because of this interaction, the agent receives a **reward** \\( R_{t+1} \\) from 
 the environment and it also ends up in a **new state** \\( S_{t+1} \\).
 
-{{<figure src="/imgs/img_rl_loop.png" alt="img-rl-loop" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_loop.png" alt="img-rl-loop" position="center" 
     caption="Figure 4. RL interaction loop" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -388,7 +388,7 @@ state-value function on the bottom part of the figure shows that in the state in
 the agent makes a hole in the bricks its estimation of the value greatly increases 
 (section labeled with *4*) in the graph.
 
-{{<figure src="/imgs/img_rl_vfunction_intuition.png" alt="fig-rl-vfunction-intuition" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_vfunction_intuition.png" alt="fig-rl-vfunction-intuition" position="center" 
     caption="Figure 6. State-value function in the game of breakout. Top: states of the agent. Bottom: estimate of the return from this state via state-value function. Taken from [2]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -408,7 +408,7 @@ well is a certain action in a certain situation, and as you can see in the state
 with (2) and (3) the function estimates that action UP will give a greater return than
 the other two actions.
 
-{{<figure src="/imgs/img_rl_qfunction_intuition.png" alt="fig-rl-qfunction-intuition" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_qfunction_intuition.png" alt="fig-rl-qfunction-intuition" position="center" 
     caption="Figure 7. Action-value function in the game of pong. Top: states of the agent. Bottom: estimate of the return from this state for each action via action-value function. Taken from [2]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -419,7 +419,7 @@ shows a taxonomy of the available approaches and methods within each approach. W
 be following the Value-based approach, in which we will try to obtain the optimal
 action-value function \\( Q^{\star} \\).
 
-{{<figure src="/imgs/img_rl_algs_taxonomy.png" alt="fig-rl-algs-taxonomy" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_algs_taxonomy.png" alt="fig-rl-algs-taxonomy" position="center" 
     caption="Figure 8. A non-exhaustive taxonomy of algorithms in modern RL. Taken from [3]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -639,7 +639,7 @@ case of Computer Vision). Fortunately, we can use Deep Learning to help us come
 with the right internal features required for the problem we are trying to solve,
 as shown in the image below.
 
-{{<figure src="/imgs/img_deeprl_intuition_1.png" alt="fig-deeprl-intuition-1" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_deeprl_intuition_1.png" alt="fig-deeprl-intuition-1" position="center" 
     caption="Figure 9. End to end training of an image classification task using Deep Learning. Taken from [7]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -647,7 +647,7 @@ Similarly, we can combine Deep Learning (as powerful function approximators) wit
 Reinforcement Learning into a similar pipeline that would allow the agent learn
 the required representations to solve the task at hand.
 
-{{<figure src="/imgs/img_deeprl_intuition_2.png" alt="fig-deeprl-intuition-2" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_deeprl_intuition_2.png" alt="fig-deeprl-intuition-2" position="center" 
     caption="Figure 10. End to end training in the context of DeepRL. Taken from [7]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -676,7 +676,7 @@ according to the reward obtained (recall the td-target is used as a true estimat
 our algorithm). So, we are effectively pushing our weights using each sample, which
 in turn depended on the previous one (both reward and next state).
 
-{{<figure src="/imgs/img_dqn_exp_replay_intuition.png" alt="fig-dqn-exp-replay-intuition" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_intuition.png" alt="fig-dqn-exp-replay-intuition" position="center" 
     caption="Figure 11. One type of correlation (sequential). Rewards and states visited depend on the previous experiences. Adapted from [8]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -696,7 +696,7 @@ as we update only the other action. If we have a single model for our \\( Q_{\th
 as we change the weights of our network we will also slightly alter the values for other
 actions in potentially undesired ways.
 
-{{<figure src="/imgs/img_dqn_exp_replay_tennis_example.png" alt="fig-dqn-exp-replay-tennis-example" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_tennis_example.png" alt="fig-dqn-exp-replay-tennis-example" position="center" 
     caption="Figure 12. An example of how correlations in sequences of data could be bad. Adapted from [8]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -707,7 +707,7 @@ break the correlations between samples in the minibatch as they might not come
 from consequent steps (or even come from different episodes). This is depicted in
 Figure 13 below.
 
-{{<figure src="/imgs/img_dqn_exp_replay_buffer.png" alt="fig-dqn-exp-replay-buffer" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_buffer.png" alt="fig-dqn-exp-replay-buffer" position="center" 
     caption="Figure 13. Storing and sampling from a Replay buffer" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -747,7 +747,7 @@ number of steps. The difference is that, as the name suggests, these updates are
 jumpy than the hard-updates made by copying entirely the weights of the network. At convergence,
 this update is very similar to a hard-update as the network weights do not change too much.
 
-{{<figure src="/imgs/img_dqn_soft_updates.png" alt="fig-dqn-soft-updates" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_soft_updates.png" alt="fig-dqn-soft-updates" position="center" 
     caption="Figure 14. Soft updates v.s. Hard-updates to the weights of a target network" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -875,7 +875,7 @@ Below are some key aspects to take into consideration:
   pair, or use \\( s \\) as only input to the network and grab  all the q-values for 
   all actions \\( a \in \mathbb{A} \\). Both of these options are shown in the figure below.
   
-{{<figure src="/imgs/img_dqn_qnetwork_choices.png" alt="fig-dqn-qnetwork-choices" position="center" 
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_qnetwork_choices.png" alt="fig-dqn-qnetwork-choices" position="center" 
     caption="Figure 15. Q-network choices. Left: A Q-network that outputs one value per state-action pair. Right: A Q-network that outputs all q-values over all actions for a given state" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
@@ -2191,6 +2191,10 @@ a working implementation of the DQN on this gym environment:
 ## 7. Improvements: Double DQN
 
 After having the base DQN implementation working I decided to try implementing
+the improvements mentioned in the lectures, namely: Double DQN, Prioritized Experience
+Replay, and Dueling DQN. So far, we have implemented the first two, and in this section
+we discuss the first one.
+
 
 
 ## 8. Improvements: Prioritized Experience Replay
