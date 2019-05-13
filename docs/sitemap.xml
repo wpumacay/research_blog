@@ -3,12 +3,39 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/deeprl-pt0-intro/</loc>
+    <lastmod>2019-05-06T15:35:13-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/</loc>
+    <lastmod>2019-05-06T15:35:13-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/rl-dynamic-programming/</loc>
+    <lastmod>2019-04-01T23:31:27-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/hello-world/</loc>
+    <lastmod>2019-03-26T23:52:12-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://wpumacay.github.io/research_blog/categories/</loc>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wpumacay.github.io/research_blog/</loc>
+    <lastmod>2019-05-06T15:35:13-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/</loc>
+    <lastmod>2019-05-06T15:35:13-05:00</lastmod>
     <priority>0</priority>
   </url>
   
