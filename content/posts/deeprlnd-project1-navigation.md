@@ -23,7 +23,7 @@ The following are the topics to be covered in this post:
 2. [Setting up the dependencies to run the accompanying code.](#2-accompanying-code-and-setup)
 3. [An overview of the DQN algorithm.](#3-an-overview-of-the-dqn-algorithm)
 4. [DQN Implementation.](#4-dqn-implementation)
-5. [The chosen hyperparameters and some discussion.](#5-hyperparameters-selection)
+5. [Testing and choosing hyperparameters.](#5-hyperparameters-selection)
 6. [The results obtained and some discussion.](#6-results-of-dqn-on-the-banana-collector-environment)
 7. [An overview of the improvements: Double DQN.](#7-improvements-double-dqn)
 8. [An overview of the improvements: Prioritized Experience Replay.](#8-improvements-prioritized-experience-replay)
@@ -2141,11 +2141,57 @@ env. for testing purposes.
   python -mpdb MY_AWESOME_FUNKY_SCRIPT.py <PARAMS>
   ```
 
-## 5. Hyperparameters selection
+## 5. Testing and choosing hyperparameters
+
+In this section we discuss some of the steps we made in order to have a functional
+implementation that could solve the task at hand. We had many issues to get it working,
+so perhaps some of the steps we made could help you when making your own implementation.
+
+### 5.1 Debugging and testing
+
+Initially, our implementation was supposed to be working on gym environments that
+had a continuous state space and a discrete action space, being the environment
+suggested for testing gym's LunarLander. We had various bugs before we could have
+a working implementation of the DQN on this gym environment:
+
+### Crashes everywhere : 
+  This where the more simple to fix. They where mostly due
+  to our inexperience with the Deep learning package at hand. We decided to first
+  implement the concrete model in PyTorch as we were already provided with a solution
+  that we could refer to in the worst case scenario. For this part, using **pdb**
+  and running the scripts in debug mode helped a lot to debug shapes, arguments that
+  some functions expected in some specific way (squeeze and unsqueeze here and there).
+  PyTorch was a charm to work with because if something crashed we could just evaluate
+  some tensors using pdb (or worst case using **code**). I'd suggest checking [this](https://www.codementor.io/stevek/advanced-python-debugging-with-pdb-g56gvmpfa)
+  post, which explains how to use pdb really well.
+
+### Simple test cases : 
+  Once everything was not crashing, and after various passes
+  to the code to check that everything should work fine, we decided to let the beast 
+  loose and destroy the task. Well, that didn't go that well, as I only ended up 
+  destroying a virtual lunar lander every episode. There were some bugs in the code
+  that I just didn't noticed, even after various passes to the code. This is were
+  having a decouple and modularized implementation comes in handy.
+
+  You see, it's a bit frustrating when you look at your code and everything seems
+  fine but it just doesn't, and you actually have lots of places you can check and
+  knobs you can tune. Where the errors due to my hyperparameters?. Was there an error
+  that might have slipped all my checks?. Hopefully, I had watched a [lecture](https://youtu.be/8EcdaCk9KaQ) 
+  from the DeepRL bootcamp in which John Schulman discussed the nuts and bolts of DeepRL.
+  A suggestion saved me was to test in a simple toy problem and then start scaling up to your
+  problem at hand. So, I happened to have a gridworld environment laying around that I knew
+  that tabular q-learning should work.
+
+### 5.2 Choosing hyperparameters
+
+
 
 ## 6. Results of DQN on the Banana Collector Environment
 
 ## 7. Improvements: Double DQN
+
+After having the base DQN implementation working I decided to try implementing
+
 
 ## 8. Improvements: Prioritized Experience Replay
 
