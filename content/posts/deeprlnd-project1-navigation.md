@@ -1,6 +1,6 @@
 ---
 title: "Udacity DeepRL project 1: Navigation"
-date: 2019-05-06T15:35:13-05:00
+date: 2019-05-013
 draft: false
 math: true
 markup: mmark

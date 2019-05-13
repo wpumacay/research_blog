@@ -6,49 +6,19 @@
     <description>Recent content in Posts on Gregor the coding cat</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 06 May 2019 15:35:13 -0500</lastBuildDate>
     
 	<atom:link href="https://wpumacay.github.io/research_blog/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Udacity DeepRL project 1: Navigation</title>
-      <link>https://wpumacay.github.io/research_blog/posts/deeprl-pt0-intro/</link>
-      <pubDate>Mon, 06 May 2019 15:35:13 -0500</pubDate>
-      
-      <guid>https://wpumacay.github.io/research_blog/posts/deeprl-pt0-intro/</guid>
-      <description>Using DQN to solve the Banana environment from ML-Agents In this post we will look at how to implement an agent that uses the DQN algorithm to solve a simple navigation tasks from the ml-agents package. This post is part of the submission for the project-1 of the Deep Reinforcement Learning Nanodegree by Udacity.
-Outline These are the following topics we will cover:
- A quick overview of RL and DeepRL.</description>
-    </item>
-    
-    <item>
-      <title>Udacity DeepRL project 1: Navigation</title>
       <link>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/</link>
-      <pubDate>Mon, 06 May 2019 15:35:13 -0500</pubDate>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/</guid>
       <description>Using DQN to solve the Banana environment from ML-Agents This is an accompanying post for the submission of the Project 1: navigation from the Udacity Deep Reinforcement Learning Nanodegree, which consisted on building a DQN-based agent to navigate and collect bananas from the Banana Collector environment from Unity ML-Agents.
 Figure 1. DQN agent collecting bananas  The following are the topics to be covered in this post:
  Description of the Banana Collector Environment.</description>
-    </item>
-    
-    <item>
-      <title>Rl Dynamic Programming</title>
-      <link>https://wpumacay.github.io/research_blog/posts/rl-dynamic-programming/</link>
-      <pubDate>Mon, 01 Apr 2019 23:31:27 -0500</pubDate>
-      
-      <guid>https://wpumacay.github.io/research_blog/posts/rl-dynamic-programming/</guid>
-      <description>Planning by Dynamic Programming Introduction The first set of methods we will study are exact methods, which can be used when we have a perfect model of the dynamics of the environment, namely the joint distribution \( p(s&#39;,r|s,a) \) defined in our MDP. By having a model we will take advantage of the recursive form of our problem, given by the Bellman Equations studied earlier, and solve for the State-Value function ( \( V(s) \) ) and Action-Value function ( \( Q(s,a) \) ) using the following iterative methods:</description>
-    </item>
-    
-    <item>
-      <title>Hello World</title>
-      <link>https://wpumacay.github.io/research_blog/posts/hello-world/</link>
-      <pubDate>Tue, 26 Mar 2019 23:52:12 -0500</pubDate>
-      
-      <guid>https://wpumacay.github.io/research_blog/posts/hello-world/</guid>
-      <description></description>
     </item>
     
   </channel>
