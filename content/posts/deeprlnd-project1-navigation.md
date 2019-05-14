@@ -2458,6 +2458,379 @@ i.e. when new bellman errors are computed for a minibatch. Notice that we are up
 priorities over the minibatch only, and not the whole elements in the prioritized 
 replay buffer, which is discussed in section 3.3 on Stochastic Prioritization in [12].
 
+### Implementation
+
+The full implementation of PER is distributed over four files:
+
+* [segmentree.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/segmentree.py),
+  which implements the Segment Tree, Sum Tree, and Min Tree (used for keeping track 
+  of the min priority) data structures. This implementation was based on OpenAI
+  baselines [14], and in [this](https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py) 
+  and [this](https://github.com/jaromiru/AI-blog/blob/master/SumTree.py) two implementations.
+  We kept a MinTree as in the OpenAI baselines implementation to be consistent with
+  their implementation. However, we could have actually kept a variable updated with the min
+  at each update of the priorities as well.
+
+* [prioritybuffer.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/prioritybuffer.py),
+  which implements the prioritized replay buffer. It was also based on the three resources
+  mentioned above.
+
+* [agent.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/core/agent.py),
+  which has a slight modification for the learning method to take into account importance
+  sampling.
+
+* [model_pytorch.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/model_pytorch.py),
+  which implements the required modifications to the loss function when using PER.
+
+We will focus mainly in the implementation of the priority buffer, the changes made 
+to the agent base code and the changes made to the model. I'd suggest the reader 
+to refer to the resources about the segmentree and the implementation (this one 
+and the other) to fully understand the sumtree and mintree data structures.
+
+The key methods in the priority buffer are the [**\_\_init\_\_**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/utils/prioritybuffer.py#L13)
+[**add**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/utils/prioritybuffer.py#L56), 
+[**sample**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/utils/prioritybuffer.py#L79) and 
+[**updatePriorities**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/utils/prioritybuffer.py#L179)
+methods, which we will analyze one by one.
+
+* The constructor ( **\_\_init\_\_** ) instantiates the prioritized replay buffer
+  by copying the required hyperparameters, namely: \\( e \\) amount extra for priority
+  (recall \\( p_{t} = \vert \delta_{t} \vert + e \\) ), \\( \alpha \\) power to control
+  how priority affects the sample probability, \\( \beta \\) power to control the amount
+  of importance sampling used (annealed from given value up to 1), and the amount 
+  \\( \Delta \beta \\) that the \\( \beta \\) factor increases every sampling call.
+  We also create the Sum Tree and the Min Tree as required for the sampling and
+  importance sampling calculation process.
+
+```python
+    def __init__( self, 
+                  bufferSize, 
+                  randomSeed, 
+                  eps = 0.01, 
+                  alpha = 0.6, 
+                  beta = 0.4,
+                  dbeta = 0.00001 ) :
+
+        super( DqnPriorityBuffer, self ).__init__( bufferSize, randomSeed )
+
+        # hyperparameters of Prioritized experience replay
+        self._eps   = eps    # extra ammount added to the abs(tderror) to avoid zero probs.
+        self._alpha = alpha  # regulates how much the priority affects the probs of sampling
+        self._beta  = beta   # regulates how much away from true importance sampling we go (up annealed to 1)
+        self._dbeta = dbeta  # regulates how much we anneal up the previous regulator of importance sampling
+
+        # a handy experience tuple constructor
+        self._experience = namedtuple( 'Step', 
+                                       field_names = [ 'state', 
+                                                       'action',
+                                                       'reward',
+                                                       'nextState',
+                                                       'endFlag' ] )
+        # sumtree for taking the appropriate samples
+        self._sumtree = segmentree.SumTree( self._bufferSize )
+        # mintree for taking the actual min as we go
+        self._mintree = segmentree.MinTree( self._bufferSize )
+
+        # a variable to store the running max priority
+        self._maxpriority = 1.
+        # a variable to store the running min priority
+        self._minpriority = eps
+
+        # number of "actual" elements in the buffer
+        self._count = 0
+```
+
+* The **add** method add an experience tuple to the buffer. We create the experience
+  object (data of the leaves of the trees), and add it to both the Sum Tree and the
+  Min Tree with maximum priority (as we want to make sure new experiences have a 
+  better chance of being picked at least once).
+
+```python
+    def add( self, state, action, nextState, reward, endFlag ) :
+        """Adds an experience tuple to memory
+
+        Args:
+            state (np.ndarray)      : state of the environment at time (t)
+            action (int)            : action taken at time (t)
+            nextState (np.ndarray)  : state of the environment at time (t+1) after taking action
+            reward (float)          : reward at time (t+1) for this transition
+            endFlag (bool)          : flag that indicates if this state (t+1) is terminal
+
+        """
+
+        # create a experience object from the arguments
+        _expObj = self._experience( state, action, reward, nextState, endFlag )
+
+        # store the data into a node in the smtree, with nodevalue equal its priority
+        # maxpriority is used here, to ensure these tuples can be sampled later
+        self._sumtree.add( _expObj, self._maxpriority ** self._alpha )
+        self._mintree.add( _expObj, self._maxpriority ** self._alpha )
+
+        # update actual number of elements
+        self._count = min( self._count + 1, self._bufferSize )
+```
+
+* The **sample** method is the most important one, as it is in charge of sampling
+  using the Sum Tree and computing the importance sampling weights using both the
+  Sum Tree and Min Tree. As explained earlier, the sampling process consists of 
+  sampling random numbers inside bins over the whole union of priorities by querying
+  the Sum Tree with these random numbers. The importance sampling weights are computed
+  as explained earlier, and returned along the corresponding experience tuple for usage
+  in the SGD process during learning. We also return the indices in the tree that
+  correspond to these samples for later updates, as the Bellman Errors will be computed
+  for these experiences and updated after the SGD step has been taken (shown later
+  in the modifications to the core agent functionality).
+
+```python
+    def sample( self, batchSize ) :
+        """Samples a batch of data using consecutive sampling intervals over the sumtree ranges
+
+        Args:
+            batchSize (int) : number of experience tuples to grab from memory
+
+        Returns:
+            (indices, experiences) : a tuple of indices (for later updates) and 
+                                     experiences from memory
+
+        Example:
+
+                    29
+                   /  \
+                  /    \
+                 13     16        
+                |  |   |  |
+               3  10  12  4       |---| |----------| |------------| |----|
+                                    3        10            12          4
+                                  ^______^______^_______^_______^_______^
+                                        *      *      *   *    *     *
+
+            5 samples using intervals, and got 10, 10, 12, 12, 4
+        """
+        # experiences sampled, indices and importance sampling weights
+        _expBatch = []
+        _indicesBatch = []
+        _impSampWeightsBatch = []
+
+        # compute intervals sizes for sampling
+        _prioritySegSize = self._sumtree.sum() / batchSize
+
+        # min node-value (priority) in sumtree
+        _minPriority = self._mintree.min()
+        # min probability that a node can have
+        _minProb = _minPriority / self._sumtree.sum()
+
+        # take sampls using segments over the total range of the sumtree
+        for i in range( batchSize ) :
+            # left and right ticks of the segments
+            _a = _prioritySegSize * i
+            _b = _prioritySegSize * ( i + 1 )
+            ## _b = min( _prioritySegSize * ( i + 1 ), self._sumtree.sum() - 1e-5 )
+
+            # throw the dice over this segment
+            _v = np.random.uniform( _a, _b )
+            _indx, _priority, _exp = self._sumtree.getNode( _v )
+
+            # Recall how importance sampling weight is computed (from paper)
+            #
+            # E   { r } = E    { p * r  } = E     { w * r }  -> w : importance 
+            #  r~p         r~p'  -           r~p'                   sampling
+            #                    p'                                 weight
+            #
+            # in our case:
+            #  p  -> uniform distribution
+            #  p' -> distribution induced by the priorities
+            #
+            #      1 / N
+            #  w = ____   
+            #
+            #       P(i) -> given by sumtree (priority / total)
+            #
+            # for stability, the authors scale the weight by the max-weight ...
+            # possible, which is (because maximizing a fraction minimizes the ...
+            # denominator if the numrerator is constant=1/N) the weight of the ...
+            # node with minimum probability. After some operations :
+            # 
+            #                          b                     b
+            # w / wmax = ((1/N) / P(i))   / ((1/N) / minP(j))   
+            #                                          j
+            #                               b                      -b
+            # w / wmax = ( min P(j) / P(i) )   = ( P(i) / min P(j) )
+            #               j                              j
+
+            # compute importance sampling weights
+            _prob = _priority / self._sumtree.sum()
+            _impSampWeight = ( _prob / _minProb ) ** -self._beta
+
+            # accumulate in batch
+            _expBatch.append( _exp )
+            _indicesBatch.append( _indx )
+            _impSampWeightsBatch.append( _impSampWeight )
+
+        # stack each experience component along batch axis
+        _states = np.stack( [ exp.state for exp in _expBatch if exp is not None ] )
+        _actions = np.stack( [ exp.action for exp in _expBatch if exp is not None ] )
+        _rewards = np.stack( [ exp.reward for exp in _expBatch if exp is not None ] )
+        _nextStates = np.stack( [ exp.nextState for exp in _expBatch if exp is not None ] )
+        _endFlags = np.stack( [ exp.endFlag for exp in _expBatch if exp is not None ] ).astype( np.uint8 )
+
+        # convert indices and importance sampling weights to numpy-friendly data
+        _indicesBatch = np.array( _indicesBatch ).astype( np.int64 )
+        _impSampWeightsBatch = np.array( _impSampWeightsBatch ).astype( np.float32 )
+
+        # anneal the beta parameter
+        self._beta = min( 1., self._beta + self._dbeta )
+
+        return _states, _actions, _nextStates, _rewards, _endFlags, _indicesBatch, _impSampWeightsBatch
+```
+
+* The **updatePriorities** method is in charge of updating the priorities of the
+  sampled experiences using the new Bellman Errors computed during the SGD learning
+  step.
+
+```python
+    def updatePriorities( self, indices, absBellmanErrors ) :
+        """Updates the priorities (node-values) of the sumtree with new bellman-errors
+
+        Args:
+            indices (np.ndarray)        : indices in the sumtree that have to be updated
+            bellmanErrors (np.ndarray)  : bellman errors to be used for new priorities
+
+        """
+        # sanity-check: indices bath and bellmanErrors batch should be same length
+        assert ( len( indices ) == len( absBellmanErrors ) ), \
+               'ERROR> indices and bellman-errors batch must have same size'
+
+        # add the 'e' term to avoid 0s
+        _priorities = np.power( absBellmanErrors + self._eps, self._alpha )
+
+        for i in range( len( indices ) ) : 
+            # update each node in the sumtree and mintree
+            self._sumtree.update( indices[i], _priorities[i] )
+            self._mintree.update( indices[i], _priorities[i] )
+            # update the max priority
+            self._maxpriority = max( _priorities[i], self._maxpriority )
+```
+
+The key changes made to the [**agent**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/core/agent.py) 
+core functionality are located in the **learn** method.
+
+* We first just sample using the priority buffer, which returns also the importance
+  sampling weights to be use later in the SGD step (see line [221](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/core/agent.py#L221)).
+
+```python
+        # get a minibatch from the replay buffer
+        _minibatch = self._rbuffer.sample( self._minibatchSize )
+        if self._usePrioritizedExpReplay :
+            _states, _actions, _nextStates, _rewards, _dones, _indices, _impSampWeights = _minibatch
+        else :
+            _states, _actions, _nextStates, _rewards, _dones = _minibatch
+```
+
+* We then just execute the train step on the action-value network as usual, with
+  the slight addition of the importance sampling weights. After this step, we grab
+  the Bellman Errors computed inside the model's functionality and use them to
+  update the priorities of the sampled experiences in the minibatch (see line [277](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/core/agent.py#L277)).
+
+```python
+        # make the learning call to the model (kind of like supervised setting)
+        if self._usePrioritizedExpReplay :
+            ## if np.sum( _rewards ) > 0. :
+            ##     set_trace()
+            # train using also importance sampling weights
+            _absBellmanErrors = self._qmodel_actor.train( _states, _actions, _qtargets, _impSampWeights )
+            # and update the priorities using the new bellman erros
+            self._rbuffer.updatePriorities( _indices, _absBellmanErrors )
+        else :
+            # train using the normal data required
+            self._qmodel_actor.train( _states, _actions, _qtargets )
+```
+
+Finally, the key changes made to the [**model**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/model_pytorch.py)
+are located in the **initialize** and **train** methods:
+
+* The [**initialize**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/model_pytorch.py#L188) 
+  method constructs the appropriate loss function for the case of using importance
+  sampling (for PER) by making a custom MSE loss that includes the weights coming
+  from importance sampling.
+
+```python
+    def initialize( self, args ) :
+        # grab current pytorch device
+        self._device = args['device']
+        # send network to device
+        self._nnetwork.to( self._device )
+        # create train functionality if necessary
+        if self._trainable :
+            # check whether or not using importance sampling
+            if self._useImpSampling :
+                self._lossFcn = lambda yhat, y, w : torch.mean( w * ( ( y - yhat ) ** 2 ) )
+            else :
+                self._lossFcn = nn.MSELoss()
+            self._optimizer = optim.Adam( self._nnetwork.parameters(), lr = self._lr )
+```
+
+* The [**train**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/model_pytorch.py#L212)
+  method takes into account the use of importance sampling by passing the importance
+  sampling weights to an appropriate tensor and then calling the appropriate loss
+  function. The bellman errors are computed by default (as we are saving them), but
+  are only grabbed by the agent if using PER.
+
+```python
+    def train( self, states, actions, targets, impSampWeights = None ) :
+        if not self._trainable :
+            print( 'WARNING> tried training a non-trainable model' )
+            return None
+        else :
+            _aa = torch.from_numpy( actions ).unsqueeze( 1 ).to( self._device )
+            _xx = torch.from_numpy( states ).float().to( self._device )
+            _yy = torch.from_numpy( targets ).float().unsqueeze( 1 ).to( self._device )
+
+            # reset the gradients buffer
+            self._optimizer.zero_grad()
+    
+            # do forward pass to compute q-target predictions
+            _yyhat = self._nnetwork( _xx ).gather( 1, _aa )
+    
+            ## set_trace()
+    
+            # and compute loss and gradients
+            if self._useImpSampling :
+                assert ( impSampWeights is not None ), \
+                       'ERROR> should have passed importance sampling weights'
+
+                # convert importance sampling weights to tensor
+                _ISWeights = torch.from_numpy( impSampWeights ).float().unsqueeze( 1 ).to( self._device )
+
+                # make a custom mse loss weighted using the importance samples weights
+                _loss = self._lossFcn( _yyhat, _yy, _ISWeights )
+                _loss.backward()
+            else :
+                # do the normal loss computation and backward pass
+                _loss = self._lossFcn( _yyhat, _yy )
+                _loss.backward()
+
+            # compute bellman errors (either for saving or for prioritized exp. replay)
+            with torch.no_grad() :
+                _absBellmanErrors = torch.abs( _yy - _yyhat ).cpu().numpy()
+    
+            # run optimizer to update the weights
+            self._optimizer.step()
+    
+            # grab loss for later statistics
+            self._losses.append( _loss.item() )
+
+            if self._saveGradients :
+                # grab gradients for later
+                _params = list( self._nnetwork.parameters() )
+                _gradients = [ _params[i].grad for i in range( len( _params ) ) ]
+                self._gradients.append( _gradients )
+
+            if self._saveBellmanErrors :
+                self._bellmanErrors.append( _absBellmanErrors )
+
+            return _absBellmanErrors
+```
+
 ## 8. Some preliminary tests of the improvements
 
 ## 9. Final remarks and future improvements.
