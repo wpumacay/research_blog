@@ -125,11 +125,10 @@ from the <em>Banana Collector</em> environment from <a href="https://github.com/
 <li><a href="#3-an-overview-of-the-dqn-algorithm">An overview of the DQN algorithm.</a></li>
 <li><a href="#4-dqn-implementation">DQN Implementation.</a></li>
 <li><a href="#5-hyperparameters-selection">Testing and choosing hyperparameters.</a></li>
-<li><a href="#6-results-of-dqn-on-the-banana-collector-environment">The results obtained and some discussion.</a></li>
-<li><a href="#7-improvements-double-dqn">An overview of the improvements: Double DQN.</a></li>
-<li><a href="#8-improvements-prioritized-experience-replay">An overview of the improvements: Prioritized Experience Replay.</a></li>
-<li><a href="#9-results-of-dqn-with-the-improvements">Some ablation tests and some discussion.</a></li>
-<li><a href="#10-final-remarks-and-future-improvements">Final remarks and future improvements.</a></li>
+<li><a href="#6-results-of-dqn-on-the-banana-collector-environment">Results and discussion</a></li>
+<li><a href="#7-an-overview-of-the-improvements-to-vanilla-dqn">An overview of the improvements to vanilla DQN</a></li>
+<li><a href="#8-some-preliminary-tests-of-the-improvements">Some preliminary tests of the improvements</a></li>
+<li><a href="#9-final-remarks-and-future-improvements">Final remarks and future improvements.</a></li>
 </ol>
 
 <h2 id="1-description-of-the-banana-collector-environment">1. Description of the Banana Collector Environment</h2>
@@ -2471,14 +2470,14 @@ a working implementation of the DQN on this gym environment:</p>
 
 <h3 id="crashes-everywhere-">Crashes everywhere :</h3>
 
-<p>This where the more simple to fix. They where mostly due
-  to our inexperience with the Deep learning package at hand. We decided to first
-  implement the concrete model in PyTorch as we were already provided with a solution
-  that we could refer to in the worst case scenario. For this part, using <strong>pdb</strong>
-  and running the scripts in debug mode helped a lot to debug shapes, arguments that
-  some functions expected in some specific way (squeeze and unsqueeze here and there).
-  PyTorch was a charm to work with because if something crashed we could just evaluate
-  some tensors using pdb (or worst case using <strong>code</strong>). I'd suggest checking <a href="https://www.codementor.io/stevek/advanced-python-debugging-with-pdb-g56gvmpfa">this</a>
+<p>These issues where easier to fix. They where mostly due to our inexperience with
+  the Deep learning package at hand. We decided to first implement the concrete
+  model in PyTorch as we were already provided with a solution that we could refer
+  to in the worst case scenario. For this part, using <strong>pdb</strong> and running the scripts
+  in debug mode helped a lot to debug shapes, arguments that some functions expected
+  in some specific way (squeeze and unsqueeze here and there). PyTorch was a charm
+  to work with because if something crashed we could just evaluate some tensors
+  using pdb (or worst case using <strong>code</strong>). I'd suggest checking <a href="https://www.codementor.io/stevek/advanced-python-debugging-with-pdb-g56gvmpfa">this</a>
   post, which explains how to use pdb really well.</p>
 
 <h3 id="simple-test-cases-">Simple test cases :</h3>
@@ -2503,18 +2502,312 @@ a working implementation of the DQN on this gym environment:</p>
 
 <h2 id="6-results-of-dqn-on-the-banana-collector-environment">6. Results of DQN on the Banana Collector Environment</h2>
 
-<h2 id="7-improvements-double-dqn">7. Improvements: Double DQN</h2>
+<h2 id="7-an-overview-of-the-improvements-to-vanilla-dqn">7. An overview of the improvements to vanilla DQN</h2>
 
-<p>After having the base DQN implementation working I decided to try implementing
-the improvements mentioned in the lectures, namely: Double DQN, Prioritized Experience
+<p>After completing the base DQN implementation I decided to try implementing the
+improvements mentioned in the lectures, namely: Double DQN, Prioritized Experience
 Replay, and Dueling DQN. So far, we have implemented the first two, and in this section
 we discuss the first one.</p>
 
-<h2 id="8-improvements-prioritized-experience-replay">8. Improvements: Prioritized Experience Replay</h2>
+<h3 id="71-double-dqn">7.1 Double DQN</h3>
 
-<h2 id="9-results-of-dqn-with-the-improvements">9. Results of DQN with the improvements</h2>
+<p>This improvement tries to deal with the overestimation of the action-values that are
+used for the TD-targets. Recall the targets calculation from vanilla DQN:</p>
 
-<h2 id="10-final-remarks-and-future-improvements">10. Final remarks and future improvements.</h2>
+<p><span  class="math">\[
+TD_{targets} = r + \gamma \max_{a'}Q(s',a';\theta^{-})
+\]</span></p>
+
+<p>By definition, we can rewrite this equation as follows :</p>
+
+<p><span  class="math">\[
+TD_{targets} = r + \gamma Q(s',\argmax_{a'}Q(s',a';\theta^{-});\theta^{-})
+\]</span></p>
+
+<p>These two eqs. are equivalent because we are evaluating the Q-value for the greedy action
+(second eq.), which is the same as taking the max. Q-value over all actions (first eq.).
+Let's make the components of the equation even clearer, by identifying each term:</p>
+
+<p><span  class="math">\[
+TD_{targets} = r + \gamma \underbrace{Q(s',\overbrace{\argmax_{a'}Q(s',a';\theta^{-})}^{\text{Action chosen to be the best}};\theta^{-})}_{q_{best}:\text{Q-value for the "best" action}}
+\]</span></p>
+
+<p>The issue with this evaluation comes from evaluating q-values for actions chosen
+to be the best in specific steps during training, which might not be the best. Also
+even if these actions are actually the best actions, we still could overestimate
+its value because the network that evaluates it might just not be fully trained properly
+(which happens in early stages of training).</p>
+
+<p>To avoid this issue of overestimation the authors of [11] introduced the idea of
+Double DQN, which builds on top of the idea of Double Q-learning introduced by
+Van Hasselt [10]. The idea consists of using two function approximators to compute
+the TD-targets, instead of just one, as shown in the following equation.</p>
+
+<p><span  class="math">\[
+TD_{targets} = r + \gamma \underbrace{Q(s',\overbrace{\argmax_{a'}Q(s',a';\theta)}^{\text{Chosen using $Q_{\theta}$}};\theta^{-})}_{\text{Evaluated using $Q_{\theta^{-}}$}}
+\]</span></p>
+
+<p>Some visualizations from [11] are shown below, which show the effect of overestimation
+when using function approximation (in a simple test problem) and how Double Q-learning
+can potentially fix these issues. The test problem consists on a continuous state-space
+with just 1 dimension (shown along x-axis) and a discrete action space with 10 actions.
+The problem is set up such that all actions have the same true value equal to the
+optimal value ( \( Q^{\star}(s,a) = V^{\star}(s), \forall a \in \mathbb{A} \) ).
+The estimates are built using polinomials of 6th degree fitted to samples of the
+optimal Q-value function at various points of the state space. Rows represent cases
+with different \( Q^{\star} \), whereas columns represent the study for each case
+of overestimation.</p>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_ddqn_overestimation_and_bias.png"  alt="fig-qdqn-overestimation-and-bias"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 16. Effects of function approximation on overestimation. Image taken from [11]</figcaption>
+    
+  </figure>
+
+
+
+<p>As suggested in [11], the easiest addition we can make to our code is to use both
+action-value and target action-value networks for Double DQN, using the action-value
+network for computing the e-greedy action, and the target network to evalue the
+q-value for this action. A snippet of these changes (from the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/core/agent.py#L245">agent.py</a>
+file) that implements the required steps is shown below:</p>
+
+<pre><code class="language-python">if self._useDoubleDqn :
+    # targets are computed in the following way
+    #
+    # 
+    # q-target = r + gamma * Q( s', argmax( Q(s',a';theta) ); theta )
+    #                        ^         a'               actor     target
+    #                        |
+    #                        |              ^
+    #     qvalue from target model          |
+    #                                       |
+    #                             greedy action from actor model
+
+    # compute qvalues from both actorModel and targetModel
+    _qvals_actorModel_s   = self._qmodel_actor.eval( _nextStates )
+    _qvals_targetModel_s  = self._qmodel_target.eval( _nextStates )
+
+    # greedy actions
+    _argmaxActions = np.argmax( _qvals_actorModel_s, 1 ).reshape( -1, 1 )
+
+    # compute qtargets from the qvals of target network, ...
+    # using greedy actions from the actor network
+    _qtargets = _rewards + ( 1 - _dones ) * self._gamma * \
+                np.squeeze( np.take_along_axis( _qvals_targetModel_s, _argmaxActions, axis = 1 ) )
+else :
+    # targets are just computing the target network
+    _qtargets = _rewards + ( 1 - _dones ) * self._gamma * \
+                np.max( self._qmodel_target.eval( _nextStates ), 1 )
+</code></pre>
+
+<h3 id="72-prioritized-experience-replay">7.2 Prioritized Experience Replay</h3>
+
+<p>So far we have been sampling uniformly from the replay buffer, regardless of how
+important the experience tuples might be form training, which seems not intuitive
+as during our experiences with the world there might be some experiences that could
+help us learn the most (kind of life lessons). Prioritized Experience Replay (PER),
+introduced in [12], tries to solve this problem by adding some priority to certain
+experience tuples in the replay buffer, and then sample them according to these
+priorities.</p>
+
+<p>So, instead of sampling uniformly from the replay buffer:</p>
+
+<p><span  class="math">\[
+\left \{ ( s_{j}, a_{j}, r_{j+1}, a_{j+1} ) \right \} \sim D_{vanilla}
+\]</span></p>
+
+<p>PER samples in a prioritized way from the replay buffer:</p>
+
+<p><span  class="math">\[
+\left \{ ( s_{j}, a_{j}, r_{j+1}, a_{j+1}, w_{j} ) \right \} \sim D_{prioritized}
+\]</span></p>
+
+<p>There are various details that have to be considered in order to implement PER,
+namely:</p>
+
+<ul>
+<li>What measure should we use for the priorities?</li>
+<li>Why is there a \( w_{j} \) in the returned samples?</li>
+<li>How do we add priorities to the replay buffer, and how do we sample?</li>
+</ul>
+
+<p>These details are related to (respectively):</p>
+
+<ul>
+<li>Computing priorities from Bellman Errors.</li>
+<li>Importance Sampling (we have to fix a distribution mismatch).</li>
+<li>An efficient implementation for the prioritized buffer.</li>
+</ul>
+
+<!--We will discuss these details in the following sections. Also, there are two extra-->
+
+<!--files that we will be refering to:-->
+
+<!---->
+
+<!--* [prioritybuffer.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/prioritybuffer.py),-->
+
+<!--  which contains the implementation of the prioritized replay buffer we will use for PER.-->
+
+<!--* [segmentree.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/segmentree.py),-->
+
+<!--  which contains the data structures used to efficiently sample using priorities and-->
+
+<!--  store experience tuples.-->
+
+<h3 id="computing-priorities">Computing priorities</h3>
+
+<p>The measure we will use to compute priorities are the Bellman Errors (or TD-Errors),
+whose expression is shown below (without the double dqn improvement):</p>
+
+<p><span  class="math">\[
+\delta = r + \gamma \max_{a'} Q(s',a';\theta^{-}) - Q(s,a;\theta)
+\]</span></p>
+
+<p>This makes sense as a measurement because if the errors are big, then that is a measure
+of how off are our estimates. For the case that we had an oracle (true q-values for the
+targets), these errors are the actual values we have to be close to. In our case, we
+are using estimates with the target network, but these still give some similar information.
+Moreover, the targets at terminal states the q-values we can get from those states, so
+if they are in the replay buffer, and the error is big for them, we should use them with
+more priority. So, we have the following measure for our priorities, using the <strong>absolute
+value of the Bellman Error</strong>:</p>
+
+<p><span  class="math">\[
+p_{t} = \vert \delta_{t} \vert
+\]</span></p>
+
+<p>Thus, we can sample using this priorities by defining the following probability
+for each sample:</p>
+
+<p><span  class="math">\[
+P(j) = \frac{p_{j}}{\sum_{k}p_{k}}
+\]</span></p>
+
+<p>A slight issue comes when the TD-error is very small (or even zero). This makes the
+sampling process avoid picking experiences that have small TD-error (or even not picking
+them at all if zero). So, to avoid this issue a small positive amount of priority is added
+to ensure the priorities don't become zero, as shown in the equation below.</p>
+
+<p><span  class="math">\[
+p_{t} = \vert \delta_{t} \vert + e
+\]</span></p>
+
+<p>Finally, to control how much we let the priority affect the sample probabilities
+a hyperparameter \( \alpha \) is introduced as follows:</p>
+
+<p><span  class="math">\[
+P(j) = \frac{p_{j}^{\alpha}}{\sum_{k}p_{k}^{\alpha}}
+\]</span></p>
+
+<h3 id="sampling-from-a-different-distribution">Sampling from a different distribution</h3>
+
+<p>Because we are sampling using the priorities, we are effectively sampling from
+another distribution (other than the uniform distribution). Notice that the priorities
+will make some samples come more frequently than others. Also, try to visualize
+how the distribution changes from uniform to a distribution with peaks that depend
+on the priorities.</p>
+
+<p>Recall our objective, which was defined as an expectation:</p>
+
+<p><span  class="math">\[
+L(\theta) = \mathbb{E}_{(s,a,r,s') \sim D} \left \{ ( r + \gamma \max_{a'} Q_{\theta^{-}}(s',a') - Q_{\theta}(s,a) )^{2} \right \}
+\]</span></p>
+
+<p>To effectively remove the mismatch in distributions we have to make use of
+<a href="https://www.youtube.com/watch?v=S3LAOZxGcnk&amp;list=PLD0F06AA0D2E8FFBA&amp;index=131"><strong>Importance Sampling</strong></a>
+as follows:</p>
+
+<p><span  class="math">\[
+L(\theta) = \mathbb{E}_{(s,a,r,s') \sim D_{prioritized} } \left \{ \frac{p(D)}{p(D_{prioritized})} ( r + \gamma \max_{a'} Q_{\theta^{-}}(s',a') - Q_{\theta}(s,a) )^{2} \right \}
+\]</span></p>
+
+<p>The ratio \( w = \frac{p(D)}{p(D_{prioritized})} \) is the weight that has to be applied
+to correct for this mismatch, and it's computed from the probability that a sample is drawn
+from the buffer <strong>uniformly</strong> \( p(D) \), and the probability that a sample is drawn
+from the buffer <strong>using priorities</strong> \( p(D_{prioritized}) \). These weights can then be used
+to compute a modified loss function. As we will see in the implementation section later,
+instead of directly using the Mean Square Error loss from our DL package, we will make a modified
+loss to take into account importance sampling weights.</p>
+
+<h3 id="data-structure-for-sampling-and-storing-with-priorities">Data structure for sampling and storing with priorities</h3>
+
+<p>For the replay buffer from vanilla DQN we used a simple <strong>deque</strong> (or we could have
+also use a big numpy array an keep track of sets and gets). To support sampling using
+priorities the authors of [12] give two possible implementations (see Appendix B.2.1
+from [12]):</p>
+
+<ul>
+<li><strong>Rank-based prioritization</strong>: This implementation makes use of a priority queue
+built using a binary heap.</li>
+<li><strong>Proportional prioritization</strong>: This implementation uses a &quot;sum-tree&quot; data structure.</li>
+</ul>
+
+<p>We will use the second implementation, and explain how the datastructure works to
+enable efficient storing and sampling using priorities. This makes use of a <strong>Sum Tree</strong>,
+which is a specific case of a <a href="https://www.hackerearth.com/practice/data-structures/advanced-data-structures/segment-trees/tutorial/"><strong>Segment Tree</strong></a>
+data structure, which is consists of (quoting the previous linked resource):</p>
+
+<blockquote>
+<p>&quot;A Segment Tree is basically a binary tree used for storing
+intervals or segments. Each node in the segment Tree represents
+an interval&quot;</p>
+</blockquote>
+
+<p>An example of a Segment Tree is shown below:</p>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_per_segmentree.png"  alt="fig-per-segmentree"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 17. An example of a Segment Tree, where each node in the binary tree represents an interval/segment over the leaves.Image taken from [13]</figcaption>
+    
+  </figure>
+
+
+
+<p>As you can see from the figure, each node in the tree represents an interval. Because
+it's a binary tree, we can efficiently query and update specific interval in O(log n),
+and worst case O(n) if the tree is unbalanced.</p>
+
+<p>We can make use of this property of querying intervals to make efficient samples using
+priorities, where each interval at the leaves would consist of the priorities each leave
+has. The Segment Tree used for this case is a <strong>Sum Tree</strong>, which implements a Segment Tree
+with a sum operator that stores in each node the sum of its children. An example of such
+sum tree is shown below :</p>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_per_sumtree_priorities.png"  alt="fig-per-sumtree-priorities"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 18. An example of a Sum Tree, where each node is the sum of its children.</figcaption>
+    
+  </figure>
+
+
+
+<p>From the figure we could also see that in order to sample using the priorities in the
+leaves of the tree we essentially divide the whole segment composed of the unions of the
+priorities as segments into a number of bins required by the number of samples that
+we want to take (3 in that case). This effectivetly let's us sample using the priorities
+because each priority becomes a segment, and the chance of a random sample in a bin
+to land in that segment is proportional to the length of the segment.</p>
+
+<p>The Sum Tree let's us query in which interval a given random number will land, by
+searching through the nodes of the tree until the required leave is found (corresponding
+to the interval in which the sample will land in the union of segments view).</p>
+
+<p>Finally, updates can also be made to the tree when new priorities are available,
+i.e. when new bellman errors are computed for a minibatch. Notice that we are updating
+priorities over the minibatch only, and not the whole elements in the prioritized
+replay buffer, which is discussed in section 3.3 on Stochastic Prioritization in [12].</p>
+
+<h2 id="8-some-preliminary-tests-of-the-improvements">8. Some preliminary tests of the improvements</h2>
+
+<h2 id="9-final-remarks-and-future-improvements">9. Final remarks and future improvements.</h2>
 
 <h2 id="references">References</h2>
 
@@ -2528,6 +2821,11 @@ we discuss the first one.</p>
 <li>[7] <a href="http://rail.eecs.berkeley.edu/deeprlcourse/">UC Berkeley DeepRL course by Sergey Levine</a></li>
 <li>[8] <a href="https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893">Udacity DeepRL Nanodegree</a></li>
 <li>[9] <a href="https://sites.google.com/view/deep-rl-bootcamp/lectures">DeepRL bootcamp</a></li>
+<li>[10] Van Hasselt, Hado. <a href="https://papers.nips.cc/paper/3964-double-q-learning.pdf"><em>Double Q-learning</em></a></li>
+<li>[11] Van Hasselt, Hado &amp; Guez, Arthur &amp; Silver, David. <a href="https://arxiv.org/abs/1509.06461"><em>Deep Reinforccement Learning with Double Q-learning</em></a></li>
+<li>[12] Schaul, Tom &amp; Quan, John &amp; Antonoglou, Ioannis &amp; Silver, David. <a href="https://arxiv.org/abs/1511.05952"><em>Prioritized Experience Replay</em></a></li>
+<li>[13] Hacker Earth. <a href="https://www.hackerearth.com/practice/data-structures/advanced-data-structures/segment-trees/tutorial/">Segment Trees data structures</a></li>
+<li>[14] OpenAI. <a href="https://github.com/openai/baselines">Baselines</a></li>
 </ul>
 
     </div>
