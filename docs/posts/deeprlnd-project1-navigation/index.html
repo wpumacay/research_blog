@@ -2542,7 +2542,100 @@ file (provided in the navigation package) as follows:</p>
 <pre><code class="language-bash">python trainer_full.py train --gridworld=true
 </code></pre>
 
+<p>We then tried our implementation with some of the gym environments, specifically
+the Lunar Lander environment. Our implementation worked correctly on this environment
+after the fixes to the issues found using the gridworld test-case. The hyperparameters
+were set to roughly the same values found on the baseline of the <a href="https://github.com/udacity/deep-reinforcement-learning/blob/dc65050c8f47b365560a30a112fb84f762005c6b/dqn/solution/dqn_agent.py#L11">Udacity DQN example</a>.
+An example of the working agent is shown below:</p>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/gif_lunarlander_agent.gif"  alt="fig-lunar-lander-agent"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 19. DQN agent tested on the gym LunarLander-v2 environment</figcaption>
+    
+  </figure>
+
+
+
+<p>To test this, just use the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py">trainer_full.py</a>
+as well, in the following way:</p>
+
+<pre><code class="language-bash">python trainer_full.py train --gym=LunarLander-v2
+</code></pre>
+
 <h3 id="52-choosing-hyperparameters">5.2 Choosing hyperparameters</h3>
+
+<p>The hyperparameters were tuned from the starting hyperparameters of the DQN solution
+provided for the Lunar Lander. We didn't run exhaustive tests (neither grid nor random
+search) to tune the hyperparameters, but just incrementally increased/decreased
+some hyperparameters we considered important:</p>
+
+<ul>
+<li><p><strong>Replay Buffer size</strong>: too low of a replay buffer size (around (( 10^{4} \))) gave
+us poor performance throught various changes in the other hyperparameters. We
+gradually increased it and set it at around \( 10^{5} \) in size.</p></li>
+
+<li><p><strong>Epsilon schedule</strong>: We exponentially decreased exploration via a decay factor applied
+at every end of episode, and keeping \( \epsilon \) fixed thereafter. Low exploration
+over all training steps led to poor performance, so we gradually increased it until
+we got good performance. The calculations we made to consider how much to increase
+were based on for how long would the exploration be active (until fixed at a certain value),
+how many training steps were available and how big was our replay buffer.</p></li>
+</ul>
+
+<p>All other hyperparameters were kept roughly to the same values as the baseline provided
+by the DQN solution from Udacity, as according to these values they provided some initial
+training curves that showed that with their configuration we should be able to get
+good results.</p>
+
+<ul>
+<li><p>The max. number of steps was kept fixed as the baseline provided showed
+that at max. 1800 steps a working solution should be able to already solve the task.</p></li>
+
+<li><p>The learning rate and soft-updates factor was kept also the same as the baseline, as
+we consider these values to be small enough to not introduce instabilities during learning.
+We actually had an issue related to a wrong interpolation which made learning stable
+for test cases like lunar lander, but unstable for the banana environment. We were
+using as update rule <span  class="math">\(\theta^{-} := \tau \theta^{-} + (1-\tau) \theta\)</span>, but the
+correct update rule was <span  class="math">\(\theta^{-} := (1-\tau) \theta^{-} + \tau \theta\)</span>. As
+we were using a very small <span  class="math">\(\tau\)</span>, we were effectively running our experiements
+with hard-updates at a very high frequency (1 update per 4 steps) instead of soft-updates.
+This seemed to be working fine for the Lunar Lander environment (we increased <span  class="math">\(\tau\)</span>
+to 0.1 to make it work), but didn't work at all in the banana environment.</p></li>
+
+<li><p>The minibatch size was kept the same (64). As we are not using any big network
+nor using high dimensional inputs (like images) we don't actually have to worry much
+about our GPU being able to allocate resources for a bigger batch (so we could have set
+a bigger batch size), but we decided it to keep it that way. It would be interesting
+though to see the effect that the batch size has during learning. Of course, it'd take
+a bit longer to take a SGD step, but perhaps by taking a &quot;smoother&quot; gradient step we could get better/smoother learning.</p></li>
+</ul>
+
+<p>The hyperparameters chosen for our submission (found in the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_1_1.json">config_submission.json</a>
+file) are shown below:</p>
+
+<pre><code>&quot;stateDim&quot;                  : 37,
+&quot;nActions&quot;                  : 4,
+&quot;epsilonStart&quot;              : 1.0,
+&quot;epsilonEnd&quot;                : 0.01,
+&quot;epsilonSteps&quot;              : -1,
+&quot;epsilonDecay&quot;              : 0.9975,
+&quot;epsilonSchedule&quot;           : &quot;geometric&quot;,
+&quot;lr&quot;                        : 0.0005,
+&quot;minibatchSize&quot;             : 64,
+&quot;learningStartsAt&quot;          : 0,
+&quot;learningUpdateFreq&quot;        : 4,
+&quot;learningUpdateTargetFreq&quot;  : 4,
+&quot;learningMaxSteps&quot;          : 2000,
+&quot;replayBufferSize&quot;          : 100000,
+&quot;discount&quot;                  : 0.999,
+&quot;tau&quot;                       : 0.001,
+&quot;seed&quot;                      : 0,
+&quot;useDoubleDqn&quot;              : false,
+&quot;usePrioritizedExpReplay&quot;   : false,
+&quot;useDuelingDqn&quot;             : false
+</code></pre>
 
 <h2 id="6-results-of-dqn-on-the-banana-collector-environment">6. Results of DQN on the Banana Collector Environment</h2>
 
