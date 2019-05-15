@@ -23,7 +23,7 @@ The following are the topics to be covered in this post:
 2. [Setting up the dependencies to run the accompanying code.](#2-accompanying-code-and-setup)
 3. [An overview of the DQN algorithm.](#3-an-overview-of-the-dqn-algorithm)
 4. [DQN Implementation.](#4-dqn-implementation)
-5. [Testing and choosing hyperparameters.](#5-hyperparameters-selection)
+5. [Testing and choosing hyperparameters.](#5-testing-and-choosing-hyperparameters)
 6. [Results and discussion](#6-results-of-dqn-on-the-banana-collector-environment)
 7. [An overview of the improvements to vanilla DQN](#7-an-overview-of-the-improvements-to-vanilla-dqn)
 8. [Some preliminary tests of the improvements](#8-some-preliminary-tests-of-the-improvements)
@@ -2165,21 +2165,48 @@ a working implementation of the DQN on this gym environment:
   post, which explains how to use pdb really well.
 
 ### Simple test cases : 
-  Once everything was not crashing, and after various passes
-  to the code to check that everything should work fine, we decided to let the beast 
-  loose and destroy the task. Well, that didn't go that well, as I only ended up 
-  destroying a virtual lunar lander every episode. There were some bugs in the code
-  that I just didn't noticed, even after various passes to the code. This is were
-  having a decouple and modularized implementation comes in handy.
+  Once everything run without crashes, and after various passes to the code to check 
+  that everything should work fine, we decided to let the beast loose and destroy 
+  the task. Well, that didn't go that well, as I only ended up destroying a virtual 
+  lunar lander every episode. There were some bugs in the code that I just didn't 
+  notice, even after various passes to the code. This is were having a decouple 
+  and modularized implementation comes in handy.
 
   You see, it's a bit frustrating when you look at your code and everything seems
-  fine but it just doesn't, and you actually have lots of places you can check and
+  fine but it just doesn't work, and you actually have lots of places you can check and
   knobs you can tune. Where the errors due to my hyperparameters?. Was there an error
   that might have slipped all my checks?. Hopefully, I had watched a [lecture](https://youtu.be/8EcdaCk9KaQ) 
   from the DeepRL bootcamp in which John Schulman discussed the nuts and bolts of DeepRL.
-  A suggestion saved me was to test in a simple toy problem and then start scaling up to your
-  problem at hand. So, I happened to have a gridworld environment laying around that I knew
-  that tabular q-learning should work.
+  A suggestion that saved my day was to test in a simple toy problem and then to 
+  start to scale up to the problem at hand. So, I happened to have a gridworld 
+  environment laying around that I knew that tabular q-learning should work.
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_testing_gridworlds.png" alt="fig-testing-gridworlds" position="center" 
+    caption="Figure 16. Some gridworlds used to test our implenentation" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+In order to make our DQN agent work in this simple gridworl we just have to modify
+the preprocess function such that each discrete state of the gridworld is converted
+into a one-hot encoding state-vector representation for our network, as shown in
+the following image.
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_testing_gridworld_one_hot_encoding.png" alt="fig-testing-gridworld-one-hot-encoding" position="center" 
+    caption="Figure 17. One-hot encoding representation of each state (to serve as input to our network)" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+After fixing our implementation, this is what we should obtain as the Q-table, constructed
+by evaluating the Q-network in the gridworld discrete states, which is what were expecting.
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_testing_gridworlds_results.png" alt="fig-testing-gridworlds-results" position="center" 
+    caption="Figure 18. Results after fixing the implenentation of DQN in the gridworld environments" captionPosition="center"
+    style="border-radius: 8px;" captionStyle="color: black;">}}
+
+To test this, just use the [trainer_full.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py)
+file (provided in the navigation package) as follows:
+
+```bash
+python trainer_full.py train --gridworld=true
+```
 
 ### 5.2 Choosing hyperparameters
 
@@ -2244,7 +2271,7 @@ with different \\( Q^{\star} \\), whereas columns represent the study for each c
 of overestimation.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_ddqn_overestimation_and_bias.png" alt="fig-qdqn-overestimation-and-bias" position="center" 
-    caption="Figure 16. Effects of function approximation on overestimation. Image taken from [11]" captionPosition="center"
+    caption="Figure 19. Effects of function approximation on overestimation. Image taken from [11]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
 As suggested in [11], the easiest addition we can make to our code is to use both
@@ -2425,7 +2452,7 @@ data structure, which is consists of (quoting the previous linked resource):
 An example of a Segment Tree is shown below:
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_per_segmentree.png" alt="fig-per-segmentree" position="center" 
-    caption="Figure 17. An example of a Segment Tree, where each node in the binary tree represents an interval/segment over the leaves.Image taken from [13]" captionPosition="center"
+    caption="Figure 20. An example of a Segment Tree, where each node in the binary tree represents an interval/segment over the leaves.Image taken from [13]" captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
 As you can see from the figure, each node in the tree represents an interval. Because
@@ -2439,7 +2466,7 @@ with a sum operator that stores in each node the sum of its children. An example
 sum tree is shown below :
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_per_sumtree_priorities.png" alt="fig-per-sumtree-priorities" position="center" 
-    caption="Figure 18. An example of a Sum Tree, where each node is the sum of its children." captionPosition="center"
+    caption="Figure 21. An example of a Sum Tree, where each node is the sum of its children." captionPosition="center"
     style="border-radius: 8px;" captionStyle="color: black;">}}
 
 From the figure we could also see that in order to sample using the priorities in the
