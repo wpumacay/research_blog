@@ -2536,10 +2536,17 @@ by evaluating the Q-network in the gridworld discrete states, which is what were
 
 
 
-<p>To test this, just use the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py">trainer_full.py</a>
-file (provided in the navigation package) as follows:</p>
+<p>To train this, just use the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py">trainer_full.py</a>
+file (provided in the navigation package) as follows (for testing just replace &quot;train&quot;
+with &quot;test&quot; once training is complete):</p>
 
-<pre><code class="language-bash">python trainer_full.py train --gridworld=true
+<pre><code class="language-bash"># train a DQN-based agent with a MLP-model to solve gridworld
+python trainer_full.py train --gridworld=true
+
+# ... After training is completed
+
+# test the trained model
+python trainer_full.py test --gridworld=true
 </code></pre>
 
 <p>We then tried our implementation with some of the gym environments, specifically
@@ -2558,11 +2565,32 @@ An example of the working agent is shown below:</p>
 
 
 
-<p>To test this, just use the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py">trainer_full.py</a>
-as well, in the following way:</p>
+<p>To train this, just use the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py">trainer_full.py</a>
+as well, in the following way (for testing just replace &quot;train&quot; with &quot;test&quot; once
+training is complete):</p>
 
-<pre><code class="language-bash">python trainer_full.py train --gym=LunarLander-v2
+<pre><code class="language-bash"># train a DQN-based agent with a MLP-model to solve LunarLander-v2
+python trainer_full.py train --gym=LunarLander-v2
+
+# ... After training is completed
+
+# test the trained model
+python trainer_full.py test --gym=LunarLander-v2
 </code></pre>
+
+<p>Finally, we also tried to visualize the decision making process during runtime,
+so we made some simple visualization helpers to plot the Q-values for each action,
+and the V-value for each state (following the greedy policy).</p>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/gif_lunarlander_agent_test.gif"  alt="fig-lunar-lander-agent-test"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 20. DQN agent during test of the LunarLander-v2 environment</figcaption>
+    
+  </figure>
+
+
 
 <h3 id="52-choosing-hyperparameters">5.2 Choosing hyperparameters</h3>
 
@@ -2572,7 +2600,7 @@ search) to tune the hyperparameters, but just incrementally increased/decreased
 some hyperparameters we considered important:</p>
 
 <ul>
-<li><p><strong>Replay Buffer size</strong>: too low of a replay buffer size (around (( 10^{4} \))) gave
+<li><p><strong>Replay Buffer size</strong>: too low of a replay buffer size (around \( 10^{4} \)) gave
 us poor performance throught various changes in the other hyperparameters. We
 gradually increased it and set it at around \( 10^{5} \) in size.</p></li>
 
@@ -2638,6 +2666,123 @@ file) are shown below:</p>
 </code></pre>
 
 <h2 id="6-results-of-dqn-on-the-banana-collector-environment">6. Results of DQN on the Banana Collector Environment</h2>
+
+<p>In this section we show the results of our submission, which were obtained through
+various runs and with various seeds. The results are presented in the form of <em>time
+series plots</em> each over a single run, and <em>standard deviation</em> plots over a set of
+similar runs. We will also show the results of one of three experiments we made with
+different configurations. This experiment did not include the improvements (DDQN, PER),
+which are going to be explained in a later section. The results can be found also
+in the <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/results_analysis.ipynb">results_analysis.ipynb</a>.
+However, due to the size of the training sessions, we decided not to upload most
+of the results (apart from a single run for the submission) due to the file size
+of the combined training sessions. Still, to reproduce the same experiments just
+run the provided bash scripts:</p>
+
+<ul>
+<li><strong>training_submission.sh</strong> : to run the base experiments for the submissions</li>
+<li><strong>training_tests_1.sh</strong> : to run the first experiment, related to \( \epsilon \) tests</li>
+<li><strong>training_tests_2.sh</strong> : to run the second experiment, related to how much the improvements (DDQN and PER) to DQN help.</li>
+<li><strong>training_tests_3.sh</strong> : to run the third experiment, to check if our implementation of PER actually helps in some setups with litle exploration.</li>
+</ul>
+
+<h3 id="61-results-with-the-configuration-for-the-submission">6.1 Results with the configuration for the submission</h3>
+
+<ul>
+<li><strong>Single runs</strong>: We choose one of the results of the various runs, plotted as time
+series plots. The x-axis represents episodes (during training) and the y-axis represents
+the score obtained at that episode. Also, the noisy blue plot is the actual loss per episode,
+whereas the red curve is a smoothed (running average) curve from the previous one with a
+window of size 100. Below we show one random run from the episode (not cherry-picked)
+for both our pytorch and tensorflow implementations. As we can see, the agent
+successfully solves the environment at around episode 900. Note that this submission
+configuration is not the best configuration (hyperparameters tuned to squeeze the
+most score out of the environment), but a configuration we considered appropriate
+(moderate exploration). We found that for more aggressive exploration schedules
+(fast decay over around 300 episodes) and a moderate sized replay buffer the task
+could be solved in around 300 steps (see experiment 1 later).</li>
+</ul>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_pytorch.png"  alt="fig-results-submission-single-pytorch"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 21. Training results from one run using PyTorch as backend</figcaption>
+    
+  </figure>
+
+
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_tensorflow.png"  alt="fig-results-submission-single-tensorflow"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 22. Training results from one run using Tensorflow as backend</figcaption>
+    
+  </figure>
+
+
+
+<ul>
+<li><strong>All runs</strong>: Below we shows graphs of all runs in a single plot for a specific
+random seed. We again present one graph for each backend (pytorch and tensorflow).
+<!--The results are pretty uniform along random seeds. Of course, this might be caused
+by the nature of the algorithm itself. I was expecting some variability, as mentioned
+in [this](https://youtu.be/Vh4H0gOwdIg?t=1133) lecture on reproducibility. Perhaps
+we don't find that much variability because of the type of methods we are using,
+namely Q-learning which is off-policy. Most of the algorithms studied in the
+lecture were on-policy and based on policy gradients, which depend on the policy
+for the distribution of data they see. This might cause the effect of exploring
+and finding completely different regions due to various variabilities (different
+seeds, different implementations, etc.). Perhaps this might be caused as well--></li>
+</ul>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs.png"  alt="fig-results-submission-all-runs"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 23. Training results from all runs per random seed. Top: results using PyTorch. Bottom: results using Tensorflow.</figcaption>
+    
+  </figure>
+
+
+
+<ul>
+<li><strong>Std-plots</strong>: Finally, we show the previous plots in the form of std-plots,
+which try to give a sense of the deviation of the various runs.</li>
+</ul>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_pytorch_std.png"  alt="fig-results-submission-all-runs-std-pytorch"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 24. Std-plots from all runs using PyTorch. One color per different seed.</figcaption>
+    
+  </figure>
+
+
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_tensorflow_std.png"  alt="fig-results-submission-all-runs-std-tensorflow"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 25. Std-plots from all runs using Tensorflow. One color per different seed.</figcaption>
+    
+  </figure>
+
+
+
+<h3 id="62-experiment-1-tweaking-exploration">6.2 Experiment 1: tweaking exploration</h3>
+
+
+  <figure class="center" >
+    <img src="https://wpumacay.github.io/research_blog/imgs/img_results_experiment_1.png"  alt="fig-results-experiment-1"   style="border-radius: 8px;"  />
+    
+      <figcaption class="center"  style="color: black;" >Figure 25. Results of the first experiment. Blue: low exploration. Red: high exploration</figcaption>
+    
+  </figure>
+
+
 
 <h2 id="7-an-overview-of-the-improvements-to-vanilla-dqn">7. An overview of the improvements to vanilla DQN</h2>
 
