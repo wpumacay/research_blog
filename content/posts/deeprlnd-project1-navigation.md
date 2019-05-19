@@ -1,6 +1,11 @@
 ---
-title: "Udacity DeepRL project 1: Navigation"
-date: 2019-05-013
+title: "Udacity DeepRL project 1: Navigation - Full post"
+description: "This is a full post accompanying the submission of the navigation project 
+              of the DeepRL course by Udacity. We will cover how to solve the Banana
+              Collector environment from Unity ml-agents using Deep Q-Learning. We
+              will also cover two improvements for the base Deep Q-Learning algorithm,
+              namely Double Q-learning and Prioritized Experience Replay."
+date: 2019-05-18T17:30:00-05:00
 draft: false
 math: true
 markup: mmark
@@ -15,7 +20,7 @@ from the *Banana Collector* environment from [**Unity ML-Agents**](https://githu
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/gif_banana_agent.gif" alt="fig-banana-agent" position="center" 
     caption="Figure 1. DQN agent collecting bananas" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 The following are the topics to be covered in this post:
 
@@ -27,7 +32,7 @@ The following are the topics to be covered in this post:
 6. [Results and discussion](#6-results-of-dqn-on-the-banana-collector-environment)
 7. [An overview of the improvements to vanilla DQN](#7-an-overview-of-the-improvements-to-vanilla-dqn)
 8. [Some preliminary tests of the improvements](#8-some-preliminary-tests-of-the-improvements)
-9. [Final remarks and future improvements.](#9-final-remarks-and-future-improvements)
+9. [Final remarks and future improvements](#9-final-remarks-and-future-improvements)
 
 ## 1. Description of the Banana Collector Environment
 
@@ -41,7 +46,7 @@ description:
   a set of distance-based sensors and some intrinsic measurements, and **actions** 
   consisting of 4 discrete commands.
 * A set of NPCs consisting of bananas of two categories: **yellow bananas**, which give the
-  agent a **reward of +1**, and **purple banans**, which give the agent a **reward of -1**.
+  agent a **reward of +1**, and **purple bananas**, which give the agent a **reward of -1**.
 * The task is **episodic**, with a maximum of 300 steps per episode.
 
 ### 1.1 Agent observations
@@ -59,14 +64,14 @@ returns a vector of **5 entries each**, whose values are explained below:
 
 Below there are two separate cases that show the ray-perceptions. The first one
 to the left shows all rays reaching at least one object (either purple banana, yellow
-banana or a wall) and also the 7 sensor reading in array form (see the encodings in the
+banana or a wall) and also the 7 sensor readings in array form (see the encodings in the
 4 first entries do not contain the *none found* case). The second one to the right
 shows all but one ray reaching an object and also the 7 sensor readings in array form (see
-the encodings in the 4 first entrines do include the *none found* case for the 4th perception).
+the encodings in the 4 first entries do include the *none found* case for the 4th perception).
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_banana_env_observations.png" alt="fig-banana-agent-ray-observations" position="center" 
-    caption="Figure 2. Agent ray-perceptions. a) 7 rays reaching at least one object (banana or wall). b) One rayreaching the max. length before reaching any object" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    caption="Figure 2. Agent ray-perceptions. a) 7 rays reaching at least one object (banana or wall). b) One ray reaching the max. length before reaching any object" captionPosition="center"
+    style="border-radius: 8px;" >}}
 
 All these measurements account for an observation consisting of a vector with
 37 elements. This vector observation will be the representation of the state of 
@@ -122,19 +127,19 @@ agent.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_banana_env_actions.png" alt="fig-banana-agent-actions" position="center" 
     caption="Figure 3. Agent actions." captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 #### **Note**
 
 These actions are applicable again only for our custom build, as the original
 environment from ML-Agents has even more actions, using action tables (newer API).
 This newer API accepts in most of the cases a tuple or list for the actions, with
-each entry representing corresponding to a specific action table (a nested set of
-actions) that the agent can take. For example, for the original banana collector
-environment the actions passed should be:
+each entry corresponding to a specific action table (a nested set of actions) 
+that the agent can take. For example, for the original banana collector environment 
+the actions passed should be:
 
 ```python
-# actions are of the form: [actInTable1, actInTable2, actINTable3, actInTable4]
+# actions are of the form: [actInTable1, actInTable2, actInTable3, actInTable4]
 
 # move forward
 action = [ 1, 0, 0, 0 ]
@@ -184,7 +189,7 @@ to extract its contents when finishing the setup.
 ### **Note**
 
 The executables provided are compatible only with an older version of the ML-Agents
-toolkit (version 0.4.0). The setup below will take care of this, but keep in mind
+toolkit (version 0.4.0). The setup below will take care of this, but keep this in mind
 if you want to use the executable on your own.
 
 ### 2.2 Dependencies
@@ -198,7 +203,7 @@ to download the Unity Editor for this project (unless you want to do a custom bu
 for your platform) because the builds for the appropriate platforms are already
 provided for us.
 
-### 2.3 Downloading accompanying code and finishing setup
+### 2.3 Downloading the accompanying code and finishing setup
 
 * Grab the accompanying code from the github repo.
 
@@ -268,7 +273,7 @@ the environment and it also ends up in a **new state** \\( S_{t+1} \\).
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_loop.png" alt="img-rl-loop" position="center" 
     caption="Figure 4. RL interaction loop" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 This can be further formalize using the framework of Markov Decision Proceses (MDPs).
 Using this framework we can define our RL problem as follows:
@@ -300,10 +305,11 @@ $$
 \tau = \left \{ (s_{0},a_{0},r_{1}),(s_{1},a_{1},r_{2}),\dots,(s_{t},a_{t},r_{t+1}),\dots \right \}
 $$
 
-Tasks that always give finite-size trajectories can be defined as **episodic** (like games), 
-whereas tasks that go on forever are defined as **continuous** (like life itself). The
-task we are dealing in this post is episodic, and the length of an episode (max. length
-of any trajectory) is 300 steps.
+Tasks that always give finite-size trajectories can be defined as **episodic**, 
+like in games, whereas tasks that go on forever are defined as **continuous**, 
+like life itself (wait, I'm not elf :fearful:). The task we are dealing in this 
+post is episodic, and the length of an episode (max. length of any trajectory) 
+is 300 steps.
 
 There is a slight addition to the objective defined earlier that is often used: **the discount factor**
 \\( \gamma \\). This factor tries to take into account the effect that a same ammount 
@@ -384,16 +390,16 @@ This function \\( V_{\pi}(s) \\) serves as a kind of **intuition of how well a c
 state is if we are following a specific policy**. The figure below (taken from the DQN paper [2])
 illustrates this more clearly with the game of breakout as an example. The agent's 
 state-value function on the bottom part of the figure shows that in the state in which 
-the agent makes a hole in the bricks its estimation of the value greatly increases 
+the agent makes a hole in the bricks its estimate of the value greatly increases 
 (section labeled with *4*) in the graph.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_vfunction_intuition.png" alt="fig-rl-vfunction-intuition" position="center" 
     caption="Figure 6. State-value function in the game of breakout. Top: states of the agent. Bottom: estimate of the return from this state via state-value function. Taken from [2]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 > The action-value function \\( Q_{\pi}(s,a) \\) is defined as the expected return that
-> an agent can get if it starts at state \\( s_{t} = s \\), take an action \\( a_{t} = a \\)
-> and then follows the policy onwards.
+> an agent can get if it starts at state \\( s_{t} = s \\), takes an action \\( a_{t} = a \\)
+> and then follows the policy \\( \pi \\) onwards.
 >
 > $$
 > Q_{\pi}(s,a) = \mathbb{E} \left \{ G_{t} | s_{t} = s, a_{t} = a; \pi \right \}
@@ -409,7 +415,7 @@ the other two actions.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_qfunction_intuition.png" alt="fig-rl-qfunction-intuition" position="center" 
     caption="Figure 7. Action-value function in the game of pong. Top: states of the agent. Bottom: estimate of the return from this state for each action via action-value function. Taken from [2]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 ### 3.2 RL solution methods
 
@@ -420,7 +426,7 @@ action-value function \\( Q^{\star} \\).
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_rl_algs_taxonomy.png" alt="fig-rl-algs-taxonomy" position="center" 
     caption="Figure 8. A non-exhaustive taxonomy of algorithms in modern RL. Taken from [3]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 Value based methods are based on the **Bellman Equations**, which specify what the
 optimal state-value and action-value functions should satisfy in order to be optimal.
@@ -609,7 +615,7 @@ This yields the following algorithm:
 >             * \\( Q_{target} = r \\)
 >         * Else:
 >             * \\( Q_{target} = r + \gamma \max_{a'}Q_{\theta}(s',a') \\)
->         * Update parameters \\( \{theta} \\) using the following update rule :
+>         * Update parameters \\( \theta \\) using the following update rule :
 >
 > $$
 > \theta := \theta + \alpha ( Q_{target} - Q_{\theta}(s_{t},a_{t}) ) \nabla_{\theta} Q_{\theta}\vert_{s=s_{t},a=a_{t}}
@@ -640,7 +646,7 @@ as shown in the image below.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_deeprl_intuition_1.png" alt="fig-deeprl-intuition-1" position="center" 
     caption="Figure 9. End to end training of an image classification task using Deep Learning. Taken from [7]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 Similarly, we can combine Deep Learning (as powerful function approximators) with
 Reinforcement Learning into a similar pipeline that would allow the agent learn
@@ -648,14 +654,15 @@ the required representations to solve the task at hand.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_deeprl_intuition_2.png" alt="fig-deeprl-intuition-2" position="center" 
     caption="Figure 10. End to end training in the context of DeepRL. Taken from [7]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 However, unlike supervised learning, the RL setup forces us to deal with sequential 
-data, which break the i.i.d. assumption (independent and identically distributed).
+data, which breaks the i.i.d. assumption (independent and identically distributed).
 This brings correlations in the data that break direct vanilla approaches (just
 replacing the function approximator with a deep network, and hoping for the best).
 Moreover, unlike the tabular setup, there are no convergence guarantees for our
-algorithms when using non-linear function approximators (see Chapter 11 in [1]).
+algorithms when using non-linear function approximators (see Chapter 11 in [1] for
+further info).
 
 To solve part of these issues, the authors in [2] developed various improvements
 to the Vanilla setting that helped stabilize learning and break these annoying 
@@ -665,7 +672,7 @@ correlations: **Experience Replay** and **Fixed Targets**.
 
 Experience replay is a mechanism introduced in [2] and it consists of **Learning from
 past stored experiences during replay sessions**. Basically, we remember our experiences
-in memory (called a replay buffer) and learn from them later. This allows us make more
+in memory (called a replay buffer) and learn from them later. This allows us to make more
 efficient use of past experiences by not throwing away samples right away, and it also helps 
 to break one type of correlations: sequential correlations between experiences 
 \\( (s_{t},a_{t},r_{t+1},s_{t+1}) \\). In Figure 11 we try to depict this type of correlation
@@ -673,21 +680,22 @@ by showing 3 consecutive experience tuples along a trajectory. Assuming we are d
 one gradient update with each tuple using SGD we are then pushing our learned weights 
 according to the reward obtained (recall the td-target is used as a true estimate for
 our algorithm). So, we are effectively pushing our weights using each sample, which
-in turn depended on the previous one (both reward and next state).
+in turn depended on the previous one (both reward and next state) because of the same
+process happening a time step before (the weights were pushed a bit using previous rewards).
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_intuition.png" alt="fig-dqn-exp-replay-intuition" position="center" 
     caption="Figure 11. One type of correlation (sequential). Rewards and states visited depend on the previous experiences. Adapted from [8]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 We'll borrow the example from the Udacity Nanodegree [8] to explain this issue a bit further:
-Suppose you are learning to play tennis, and you are using the action-value function 
+Suppose you are learning to play tennis and you are using the action-value function 
 approximation algorithm from last section to learn from your tennis training experiences
-whether to use your forehand or backhand shots in specific situations. Recall that unlike 
+whether to use your forehand or backhand shots in specific situations. Recall that, unlike 
 the tabular case, nearby pairs in state-action space will have similar values (which is 
 actually what we wanted when discussing "generalization"). In the case of our tennis 
 example, if we learn online as we practice we might start getting a situation that 
-favors using our forehand shot (because we might have started getting changes to
-do our forehand), which might be good for balls coming from the right. However,
+favors using our forehand shot (because we might have started getting more chances to
+use our forehand), which might be good for balls coming from the right. However,
 due to our function approximator, our Q-function will start to favor ever so slightly
 the forehand action even in cases were the ball comes to our left. I placed a question
 mark for the q-values of the other action as we might not know how their values are evolving
@@ -697,7 +705,7 @@ actions in potentially undesired ways.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_tennis_example.png" alt="fig-dqn-exp-replay-tennis-example" position="center" 
     caption="Figure 12. An example of how correlations in sequences of data could be bad. Adapted from [8]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 To solve these issues, the Experience Replay mechanism makes the agent learn from
 minibatches of past stored experience during training steps. We basically put all
@@ -708,7 +716,7 @@ Figure 13 below.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_buffer.png" alt="fig-dqn-exp-replay-buffer" position="center" 
     caption="Figure 13. Storing and sampling from a Replay buffer" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 ### 3.5.3 DQN: Fixed Targets
 
@@ -748,7 +756,7 @@ this update is very similar to a hard-update as the network weights do not chang
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_soft_updates.png" alt="fig-dqn-soft-updates" position="center" 
     caption="Figure 14. Soft updates v.s. Hard-updates to the weights of a target network" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 
 ### 3.5.4 Sidenote: on the intuition behind issues with correlations
@@ -812,7 +820,7 @@ regular updates.
 Below are some key aspects to take into consideration:
 
 ### **Preprocessing** \\( \phi_{t} = \phi( s_{t} ) \\): 
-  This step consist in converting the states|observations \\( s_{t} \\) received 
+  This step consists in converting the states|observations \\( s_{t} \\) received 
   from the simulator into an appropriate state representation that can be used 
   by our action-value network \\( Q(\phi_{t},a_{t};\theta) \\). We usually receive 
   observations from the environment which in some cases (if we are lucky) consist 
@@ -831,12 +839,12 @@ Below are some key aspects to take into consideration:
 
 ### **Grounding terminal estimates** : 
   Grounding the estimates for terminal states is important because we don't want
-  to grant an estimate to the value for a terminal state bigger than what it could
-  actually be. If we are just one step away of a terminal state, the  our trajectories
+  to make an estimate to the value for a terminal state bigger than what it could
+  actually be. If we are just one step away of a terminal state, then our trajectories
   have length one and the return we obtain is actually only that reward. All previous 
   algorithms do a check of whether or not a state is terminal in order to compute 
   the appropriate TD-target. However, in tabular Q-learning you will find that in some 
-  implementations (unlike the one we presented earliear) there is no check similar to 
+  implementations (unlike the one we presented earlier) there is no check similar to 
   this one, but instead the entries of the Q-table are set to zeros for the terminal states, 
   which is effectively the same as doing this check, as shown in the equation below:
 
@@ -876,7 +884,7 @@ Below are some key aspects to take into consideration:
   
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_dqn_qnetwork_choices.png" alt="fig-dqn-qnetwork-choices" position="center" 
     caption="Figure 15. Q-network choices. Left: A Q-network that outputs one value per state-action pair. Right: A Q-network that outputs all q-values over all actions for a given state" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
   The first option would cost more as we need to compute all q-values in order
   to grab the maximum of them for both the TD-target calculation and the \\( \epsilon \\)-greedy
@@ -891,7 +899,7 @@ Below are some key aspects to take into consideration:
   L(\theta) = \mathbb{E}_{s,a} \left \{ ( Q^{\star}(s,a) - \hat Q_{\theta}(s,a) )^{2} \right \}
   $$
 
-  If using our choice of network we would have to change the term $$\hat Q_{\theta}(s,a)$$
+  If we use the network we chose before we would have to change the term $$\hat Q_{\theta}(s,a)$$
   by the term $$\hat Q_{\theta}^{(a)}(s)$$ (or equivalently $$e_{a}^{T} \hat Q_{\theta}(s)$$ if you
   prefer dot products). Thus, our loss function would change to:
 
@@ -930,18 +938,18 @@ Below are some key aspects to take into consideration:
 ## 4. DQN Implementation
 
 At last, in this section we will cover the full implementation of the DQN algorithm
-from [2] that uses soft-updates. This implementation is based on the DQN implementation
-from Deepmind (written in Torch and Lua), which can be found [here](https://sites.google.com/a/deepmind.com/dqn/).
-Our implementation tried to decouple the key aspects of the algorithm from the model 
+from [2] that uses soft-updates. This implementation is based on the original DQN 
+implementation from Deepmind (written in Torch and Lua), which can be found [here](https://sites.google.com/a/deepmind.com/dqn/).
+Our implementation tries to decouple the key aspects of the algorithm from the model 
 itself in a kind of library-agnostic way (effectively decoupling the RL part from
 the DL part). At the end of this section we will add some considerations we made 
 for our implementation.
 
 **Disclaimer**: the trained model has not been tested in the Bnana-Visual environment,
 which provides as observations frames instead of the vector observations discussed
-earlier. There might be some code that related to the visual case which I'd been
-tested, but I'm still debugging it. I'll update this post with the visual case as well
-once I have it working properly.
+earlier. There might be some code that is related to the visual case which I've been
+testing for a while, but I'm still debugging it. I'll update this post with the visual 
+case as well once I have it working properly.
 
 ### 4.1 Interfaces and Concretions
 
@@ -949,13 +957,13 @@ Our implementation makes use of abstractions and decoupling, as we implemented
 the algorithm from scratch. The main reason is that we wanted to grasp extra 
 details of the algorithm without following another implementation step by step
 (and also to avoid having a pile of tf.ops to deal with or some pytorch specific 
-functionality being around the core features of the algorithm :smile:).
+functionality laying around the core features of the algorithm :smile:).
 
 Just to be in the same page, by an **Interface** we mean a class that provides
-a blueprint for other classes to extend. This interfaces could have declarations
-of methods and data that its objects might have, but it does not implement them
+a blueprint for other classes to extend. These interfaces could have declarations
+of methods and data that their objects will use, but it does not implement them
 (at least most of them) and leaves some *pure-virtual* methods to be implemented
-by a child class. A concretion is a specific class that extends the functionality 
+by a child class. A **Concretion** is a specific class that extends the functionality 
 of this interface, and it has to implement the pure-virtual methods. For example,
 our **agent interface** defines the functionality that is exposed by any *agent* 
 along with some code that all concretions should have (like the actual steps of
@@ -964,7 +972,7 @@ method which is case specific; and an **agent concretion** could be an agent tha
 extends this functionality (and gains the common DQN implementation) but implements
 its own version of the preprocess step.
 
-The interfaces and some of its concretions are shown below:
+The interfaces and some of its concretions are listed below:
 
 * **Agent Interface**, along concrete agents for **BananaSimple**, **BananaVisual** and **Gridworld**.
 * **Model Interface**, along concrete models for **Pytorch**, **Tensorflow** or a **numpy q-table**.
@@ -988,9 +996,9 @@ Below we show this interface (only the methods, to give a sense of how this inte
 which can be found in the [agent.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/core/agent.py)
 file in the **dqn/core** folder of the navigation package. 
 
-The key methods to be considered are the **__init__**, **act**, **step**, **_preprocess** 
+The key methods to be considered are the **\_\_init\_\_**, **act**, **step**, **\_preprocess** 
 and **_learn** methods, which implement most of the required steps of the DQN algorithm.
-We will discuss some of the details of these in snippets below, and encourage to
+We will discuss some of their details in snippets below, and we encourage the reader to
 look at the full implementation using the hyperlinks provided. Some might have
 some details removed (like dev. changes during testing), so they might look a bit
 different than the originals from the repo.
@@ -1319,7 +1327,7 @@ class IDqnAgent( object ) :
 ```
 
 * The [**_learn**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L214)
-  method is the one in charge doing the actual training. As explained in the algorithm
+  method is the one in charge of doing the actual training. As explained in the algorithm
   we first sample a minibatch from the replay buffer, compute the TD-targets (in a
   vectorized way) and request a step of SGD using the just computed TD-targets and 
   the experiences in the minibatch.
@@ -1348,8 +1356,8 @@ class IDqnAgent( object ) :
 
 * Finally, there are some specific concretions of this interface (as we mentioned
   earlier). We already showed the required implementation of the **_preprocess**
-  method but, for completeness, you can find these concretions in the [agent_raycast.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_raycast.py)
-  [agent_gridworld.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_gridworld.py) and 
+  method but, for completeness, you can find these concretions in the [agent_raycast.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_raycast.py),
+  [agent_gridworld.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_gridworld.py), and 
   [agent_visual.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/agent_visual.py).
 
 ### 4.3 Model Interface and Concretions
@@ -1426,7 +1434,7 @@ class IDqnModel( object ) :
   file contains a concrete implementation of the model interface using Pytorch
   as Deep Learning library. Below there is a snippet with most of the contents of
   this file. The **DqnModelPytorch** class serves as a proxy for the actual network
-  implemented in a standard way using the **torch.nn** and the **torch.nn.Module**
+  implemented in a standard way using the **torch.nn** module and the **torch.nn.Module**
   class. Recall that the **eval** method is used for two purposes: computing the q-values
   for the action decision, and computing the q-targets for learning. We have to make
   sure this evaluation **is not considered** for gradients computations. We make use of 
@@ -1557,11 +1565,11 @@ class DqnModelPytorch( model.IDqnModel ) :
   we decided to just use keras to create the required ops of the q-networks internally
   (see the *createNetworkCustom* function), and then build on top of them by creating 
   other ops required for training and evaluation (see the *build* method). Because we
-  are creating a static graph beforehand makes it easier to see where we are going to
+  are creating a static graph beforehand it makes it easier to see where we are going to
   have gradients being computed and used. If our model has its **_trainable** flag
   set to false we then just create the required ops for evaluation only (used for
-  computing the TD-targets), whereas if our model is trainable, then we create
-  the full computation graph which goes from inputs (minibatch $$\left \{ (s,a) \right \}$$)
+  computing the TD-targets), whereas, if our model is trainable, we create the full 
+  computation graph which goes from inputs (minibatch $$\left \{ (s,a) \right \}$$)
   to the MSE loss using the estimates from the network and the TD-targets passed for training.
 
 ```python
@@ -1676,7 +1684,7 @@ class DqnModelTensorflow( model.IDqnModel ) :
 ### 4.4 Memory Interface and Concretions
 
 * The [interface](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/buffer.py) 
-  for the replay buffer is simpler than the other. Basically, we just need a buffer 
+  for the replay buffer is simpler than the others. Basically, we just need a buffer 
   where to store experience tuples (**add** virtual method) and a way to sample a 
   small batch of experience tuples (**sample** virtual method).
 
@@ -2125,16 +2133,18 @@ env. for testing purposes.
   more ops (in tensorflow) for the whole TD-target calculation and training all in
   one pass, or avoid making copies from gpu to cpu from pytorch tensors, but the only
   part that would benefit would be the TD-targets transfer, which is a batch of vectors.
+  Moreover, we wanted to make sure each piece of the DQN algorithm was working, so we
+  wanted to be able to test each piece separately.
 
 * **Why not place everything in a notebook?**: Short answer: it's not my usual workflow. 
   Long answer: I'd argue that doing it without notebooks can help you debug things easily,
   specially when you don't have all modules already completed. I've used jupyter notebooks 
-  for experiments and they're great for showing results (in fact, some of the results are
-  accesible through some notebooks in the repo), but for the full code I don't think they 
-  are the best option. Besides, I'd argue that debugging issues using **pdb** (or in 
-  more detail using **code**) is way easier and better than using a notebook (these tools
-  really saved my day quite sometimes). I'd suggest you give it a try as well by running 
-  your scripts in *debug* mode, as shown below.
+  for experiments and they're great for making experiments on top of already-made functionality 
+  and for showing results (in fact, some of the results are accesible through some notebooks 
+  in the repo), but for the full code I don't think they are the best option. Besides, I'd 
+  argue that debugging issues using **pdb** (or in more detail using **code**) is way easier 
+  and better than using a notebook (these tools really saved my day quite sometimes). 
+  I'd suggest you give it a try as well by running your scripts in *debug* mode, as shown below.
 
   ```python
   python -mpdb MY_AWESOME_FUNKY_SCRIPT.py <PARAMS>
@@ -2156,21 +2166,21 @@ a working implementation of the DQN on this gym environment:
 ### Crashes everywhere : 
   These issues where easier to fix. They where mostly due to our inexperience with 
   the Deep learning package at hand. We decided to first implement the concrete 
-  model in PyTorch as we were already provided with a solution that we could refer 
-  to in the worst case scenario. For this part, using **pdb** and running the scripts 
-  in debug mode helped a lot to debug shapes, arguments that some functions expected 
-  in some specific way (squeeze and unsqueeze here and there). PyTorch was a charm 
+  model in PyTorch as we were already provided with a solution (by Udacity) that we 
+  could refer to in the worst case scenario. For this part, using **pdb** and running 
+  the scripts in debug mode helped a lot to debug shapes, arguments that some functions 
+  expected in some specific way (squeeze and unsqueeze here and there), etc.. PyTorch was a charm 
   to work with because if something crashed we could just evaluate some tensors 
   using pdb (or worst case using **code**). I'd suggest checking [this](https://www.codementor.io/stevek/advanced-python-debugging-with-pdb-g56gvmpfa)
   post, which explains how to use pdb really well.
 
 ### Simple test cases : 
-  Once everything run without crashes, and after various passes to the code to check 
+  Once everything ran without crashes, and after various passes to the code to check 
   that everything should work fine, we decided to let the beast loose and destroy 
   the task. Well, that didn't go that well, as I only ended up destroying a virtual 
   lunar lander every episode. There were some bugs in the code that I just didn't 
   notice, even after various passes to the code. This is were having a decouple 
-  and modularized implementation comes in handy.
+  and modularized implementation came in handy.
 
   You see, it's a bit frustrating when you look at your code and everything seems
   fine but it just doesn't work, and you actually have lots of places you can check and
@@ -2179,27 +2189,28 @@ a working implementation of the DQN on this gym environment:
   from the DeepRL bootcamp in which John Schulman discussed the nuts and bolts of DeepRL.
   A suggestion that saved my day was to test in a simple toy problem and then to 
   start to scale up to the problem at hand. So, I happened to have a gridworld 
-  environment laying around that I knew that tabular q-learning should work.
+  environment laying around that I knew that tabular q-learning should solve.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_testing_gridworlds.png" alt="fig-testing-gridworlds" position="center" 
     caption="Figure 16. Some gridworlds used to test our implenentation" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
-In order to make our DQN agent work in this simple gridworl we just have to modify
+In order to make our DQN agent work in this simple gridworld we just had to modify
 the preprocess function such that each discrete state of the gridworld is converted
 into a one-hot encoding state-vector representation for our network, as shown in
 the following image.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_testing_gridworld_one_hot_encoding.png" alt="fig-testing-gridworld-one-hot-encoding" position="center" 
     caption="Figure 17. One-hot encoding representation of each state (to serve as input to our network)" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
-After fixing our implementation, this is what we should obtain as the Q-table, constructed
-by evaluating the Q-network in the gridworld discrete states, which is what were expecting.
+After fixing our implementation, this is what we obtained as the Q-table, constructed
+by evaluating the Q-network in the gridworld discrete states, which is what were expecting
+(what tabular q-learning also returned for the same configurations).
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_testing_gridworlds_results.png" alt="fig-testing-gridworlds-results" position="center" 
     caption="Figure 18. Results after fixing the implenentation of DQN in the gridworld environments" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 To train this, just use the [trainer_full.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py)
 file (provided in the navigation package) as follows (for testing just replace "train"
@@ -2223,10 +2234,10 @@ An example of the working agent is shown below:
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/gif_lunarlander_agent.gif" alt="fig-lunar-lander-agent" position="center" 
     caption="Figure 19. DQN agent tested on the gym LunarLander-v2 environment" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 To train this, just use the [trainer_full.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/trainer_full.py)
-as well, in the following way (for testing just replace "train" with "test" once
+as well in the following way (for testing just replace "train" with "test" once
 training is complete):
 
 ```bash
@@ -2245,7 +2256,7 @@ and the V-value for each state (following the greedy policy).
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/gif_lunarlander_agent_test.gif" alt="fig-lunar-lander-agent-test" position="center" 
     caption="Figure 20. DQN agent during test of the LunarLander-v2 environment" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 
 ### 5.2 Choosing hyperparameters
@@ -2256,22 +2267,23 @@ search) to tune the hyperparameters, but just incrementally increased/decreased
 some hyperparameters we considered important:
 
 * **Replay Buffer size**: too low of a replay buffer size (around \\( 10^{4} \\)) gave
-  us poor performance throught various changes in the other hyperparameters. We
-  gradually increased it and set it at around \\( 10^{5} \\) in size.
+  us poor performance even though we made various changes in the other hyperparameters
+  to make it work. We then decided to gradually increase it until it could more or less
+  solve the task, and finally set it at around \\( 10^{5} \\) in size.
 
 * **Epsilon schedule**: We exponentially decreased exploration via a decay factor applied
   at every end of episode, and keeping \\( \epsilon \\) fixed thereafter. Low exploration
   over all training steps led to poor performance, so we gradually increased it until
-  we got good performance. The calculations we made to consider how much to increase
+  we started getting good performance. The calculations we made to consider how much to increase
   were based on for how long would the exploration be active (until fixed at a certain value),
   how many training steps were available and how big was our replay buffer.
 
 All other hyperparameters were kept roughly to the same values as the baseline provided
-by the DQN solution from Udacity, as according to these values they provided some initial
+by the DQN solution from Udacity, as based on these values they provided some initial
 training curves that showed that with their configuration we should be able to get
 good results. 
 
-* The max. number of steps was kept fixed as the baseline provided showed
+* The max. number of steps was kept fixed to the baseline value provided, as they showed
 that at max. 1800 steps a working solution should be able to already solve the task.
 
 * The learning rate and soft-updates factor was kept also the same as the baseline, as
@@ -2283,7 +2295,7 @@ correct update rule was $$\theta^{-} := (1-\tau) \theta^{-} + \tau \theta$$. As
 we were using a very small $$\tau$$, we were effectively running our experiements 
 with hard-updates at a very high frequency (1 update per 4 steps) instead of soft-updates.
 This seemed to be working fine for the Lunar Lander environment (we increased $$\tau$$
-to 0.1 to make it work), but didn't work at all in the banana environment.
+to make it work), but didn't work at all in the banana environment.
 
 * The minibatch size was kept the same (64). As we are not using any big network
 nor using high dimensional inputs (like images) we don't actually have to worry much
@@ -2292,7 +2304,7 @@ a bigger batch size), but we decided it to keep it that way. It would be interes
 though to see the effect that the batch size has during learning. Of course, it'd take 
 a bit longer to take a SGD step, but perhaps by taking a "smoother" gradient step we could get better/smoother learning.
 
-The hyperparameters chosen for our submission (found in the [config_submission.json](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_1_1.json)
+The hyperparameters chosen for our submission (found in the [config_submission.json](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_submission.json)
 file) are shown below:
 
     "stateDim"                  : 37,
@@ -2333,13 +2345,13 @@ run the provided bash scripts:
 * **training_submission.sh** : to run the base experiments for the submissions
 * **training_tests_1.sh** : to run the first experiment, related to \\( \epsilon \\) tests
 * **training_tests_2.sh** : to run the second experiment, related to how much the improvements (DDQN and PER) to DQN help.
-* **training_tests_3.sh** : to run the third experiment, to check if our implementation of PER actually helps in some setups with litle exploration.
+* **training_tests_3.sh** : to run the third experiment, to check if our implementations of DDQN and PER actually helps in some setups with little exploration.
 
 ### 6.1 Results with the configuration for the submission
 
 * **Single runs**: We choose one of the results of the various runs, plotted as time
   series plots. The x-axis represents episodes (during training) and the y-axis represents
-  the score obtained at that episode. Also, the noisy blue plot is the actual loss per episode,
+  the score obtained at that episode. Also, the noisy blue plot is the actual score per episode,
   whereas the red curve is a smoothed (running average) curve from the previous one with a
   window of size 100. Below we show one random run from the episode (not cherry-picked) 
   for both our pytorch and tensorflow implementations. As we can see, the agent 
@@ -2352,14 +2364,16 @@ run the provided bash scripts:
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_pytorch.png" alt="fig-results-submission-single-pytorch" position="center" 
     caption="Figure 21. Training results from one run using PyTorch as backend" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_tensorflow.png" alt="fig-results-submission-single-tensorflow" position="center" 
     caption="Figure 22. Training results from one run using Tensorflow as backend" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
-* **All runs**: Below we shows graphs of all runs in a single plot for a specific
-  random seed. We again present one graph for each backend (pytorch and tensorflow).
+* **All runs**: Below we shows graphs of all runs in a single plot for three different
+  random seeds. We again present one graph for each backend (pytorch and tensorflow).
+  We recorded 5 training runs per seed. Recall again that all runs correspond to the
+  same set of hyperparameters given by the **config_submission.json** file.
   <!--The results are pretty uniform along random seeds. Of course, this might be caused
   by the nature of the algorithm itself. I was expecting some variability, as mentioned
   in [this](https://youtu.be/Vh4H0gOwdIg?t=1133) lecture on reproducibility. Perhaps
@@ -2372,31 +2386,62 @@ run the provided bash scripts:
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs.png" alt="fig-results-submission-all-runs" position="center" 
     caption="Figure 23. Training results from all runs per random seed. Top: results using PyTorch. Bottom: results using Tensorflow." captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 * **Std-plots**: Finally, we show the previous plots in the form of std-plots,
-  which try to give a sense of the deviation of the various runs.
+  which try to give a sense of the deviation of the various runs. We collected
+  5 runs per seed, and each std-plot is given for a specific seed. Recall again 
+  that all runs correspond to the same set of hyperparameters given by the 
+  **config_submission.json** file.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_pytorch_std.png" alt="fig-results-submission-all-runs-std-pytorch" position="center" 
     caption="Figure 24. Std-plots from all runs using PyTorch. One color per different seed." captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_tensorflow_std.png" alt="fig-results-submission-all-runs-std-tensorflow" position="center" 
     caption="Figure 25. Std-plots from all runs using Tensorflow. One color per different seed." captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    style="border-radius: 8px;" >}}
 
 ### 6.2 Experiment 1: tweaking exploration
 
-{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_experiment_1.png" alt="fig-results-experiment-1" position="center" 
-    caption="Figure 25. Results of the first experiment. Blue: low exploration. Red: high exploration" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+In this experiment we tried to double-check if decreasing the amount of exploration
+would allow the agent to solve the task in fewer episodes. Because the amount of exploration
+is small, the agent would be forced to start trusting more its own estimates early on
+and, if the setup is right (big enough replay buffer, etc.), this might have the
+effect of making the agent solve the task quickly. The configurations used are the
+following:
+
+* [**config_agent_1_1.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_1_1.json) : 
+  This configuration has a moderate exploration schedule. We decay \\( \epsilon \\)
+  from 1.0 to 0.01 using a multiplicative decay factor of 0.9975 applied per episode.
+  This schedule makes \\( \epsilon \\) decay from 1.0 to approx. 0.1 over 1000 episodes,
+  and to the final value of 0.01 over approx. 1600 episodes.
+
+* [**config_agent_1_2.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_1_2.json) : 
+  This configuration has a little more aggresive exploration schedule. We decay \\( \epsilon \\)
+  from 1.0 to 0.01 using a multiplicative decay factor of 0.98 applied per episode.
+  This schedule makes \\( \epsilon \\) decay from 1.0 to approx. 0.1 over 100 episodes,
+  and to the final value of 0.01 over approx. 200 episodes.
+
+Below we show the training results from 5 runs over 2 random seeds using these
+configurations. These plots reveal a trend which suggests that with the second
+configuration (less exploration) we get to solve the task faster (around 400 episodes) 
+than the first configuration (around 900 episodes).
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_experiment_1_all_runs.png" alt="fig-results-experiment-1-all-runs" position="center" 
+    caption="Figure 26. Results of the first experiment. Top: moderate exploration. Bottom: little exploration" captionPosition="center"
+    style="border-radius: 8px;" >}}
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_experiment_1_all_runs_std.png" alt="fig-results-experiment-1-std" position="center" 
+    caption="Figure 27. Std-plots of the first experiment for different seeds." captionPosition="center"
+    style="border-radius: 8px;" >}}
 
 ## 7. An overview of the improvements to vanilla DQN
 
 After completing the base DQN implementation I decided to try implementing the 
 improvements mentioned in the lectures, namely: Double DQN, Prioritized Experience
 Replay, and Dueling DQN. So far, we have implemented the first two, and in this section
-we discuss the first one.
+we will discuss them both.
 
 ### 7.1 Double DQN
 
@@ -2444,16 +2489,15 @@ The problem is set up such that all actions have the same true value equal to th
 optimal value ( \\( Q^{\star}(s,a) = V^{\star}(s), \forall a \in \mathbb{A} \\) ).
 The estimates are built using polinomials of 6th degree fitted to samples of the
 optimal Q-value function at various points of the state space. Rows represent cases
-with different \\( Q^{\star} \\), whereas columns represent the study for each case
-of overestimation.
+with different \\( Q^{\star} \\), whereas columns represent the study of overestimation.
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_ddqn_overestimation_and_bias.png" alt="fig-qdqn-overestimation-and-bias" position="center" 
-    caption="Figure 19. Effects of function approximation on overestimation. Image taken from [11]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    caption="Figure 28. Effects of function approximation on overestimation. Image taken from [11]" captionPosition="center"
+    style="border-radius: 8px;" >}}
 
 As suggested in [11], the easiest addition we can make to our code is to use both
 action-value and target action-value networks for Double DQN, using the action-value
-network for computing the e-greedy action, and the target network to evalue the
+network for computing the greedy action, and the target network to evalue the
 q-value for this action. A snippet of these changes (from the [agent.py](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/core/agent.py#L245)
 file) that implements the required steps is shown below:
 
@@ -2490,12 +2534,12 @@ else :
 ### 7.2 Prioritized Experience Replay
 
 So far we have been sampling uniformly from the replay buffer, regardless of how
-important the experience tuples might be form training, which seems not intuitive
+important the experience tuples might be for training, which seems not intuitive
 as during our experiences with the world there might be some experiences that could
 help us learn the most (kind of life lessons). Prioritized Experience Replay (PER),
-introduced in [12], tries to solve this problem by adding some priority to certain 
-experience tuples in the replay buffer, and then sample them according to these 
-priorities.
+introduced in [12], is a heuristic that tries to solve this problem by adding some 
+priority to certain experience tuples in the replay buffer, and then sample them 
+according to these priorities.
 
 So, instead of sampling uniformly from the replay buffer:
 
@@ -2544,10 +2588,10 @@ This makes sense as a measurement because if the errors are big, then that is a 
 of how off are our estimates. For the case that we had an oracle (true q-values for the
 targets), these errors are the actual values we have to be close to. In our case, we
 are using estimates with the target network, but these still give some similar information.
-Moreover, the targets at terminal states the q-values we can get from those states, so
-if they are in the replay buffer, and the error is big for them, we should use them with
-more priority. So, we have the following measure for our priorities, using the **absolute
-value of the Bellman Error**:
+Moreover, the targets at almost terminal states (1-step before terminal) reduce to the
+actual returns from those states, so if they are in the replay buffer, and the error 
+is big for them, we should use them with more priority. So, we have the following 
+measure for our priorities, using the **absolute value of the Bellman Error**:
 
 $$
 p_{t} = \vert \delta_{t} \vert
@@ -2609,7 +2653,7 @@ loss to take into account importance sampling weights.
 ### Data structure for sampling and storing with priorities
 
 For the replay buffer from vanilla DQN we used a simple **deque** (or we could have
-also use a big numpy array an keep track of sets and gets). To support sampling using
+also use a big numpy array an keep track of a buffer indexing variable). To support sampling using
 priorities the authors of [12] give two possible implementations (see Appendix B.2.1 
 from [12]):
 
@@ -2620,7 +2664,7 @@ from [12]):
 We will use the second implementation, and explain how the datastructure works to
 enable efficient storing and sampling using priorities. This makes use of a **Sum Tree**,
 which is a specific case of a [**Segment Tree**](https://www.hackerearth.com/practice/data-structures/advanced-data-structures/segment-trees/tutorial/)
-data structure, which is consists of (quoting the previous linked resource):
+data structure, which consists of (quoting the previous linked resource):
 
 > "A Segment Tree is basically a binary tree used for storing 
 > intervals or segments. Each node in the segment Tree represents
@@ -2629,8 +2673,8 @@ data structure, which is consists of (quoting the previous linked resource):
 An example of a Segment Tree is shown below:
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_per_segmentree.png" alt="fig-per-segmentree" position="center" 
-    caption="Figure 20. An example of a Segment Tree, where each node in the binary tree represents an interval/segment over the leaves.Image taken from [13]" captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    caption="Figure 29. An example of a Segment Tree, where each node in the binary tree represents an interval/segment over the leaves.Image taken from [13]" captionPosition="center"
+    style="border-radius: 8px;" >}}
 
 As you can see from the figure, each node in the tree represents an interval. Because
 it's a binary tree, we can efficiently query and update specific interval in O(log n), 
@@ -2643,8 +2687,8 @@ with a sum operator that stores in each node the sum of its children. An example
 sum tree is shown below :
 
 {{<figure src="https://wpumacay.github.io/research_blog/imgs/img_per_sumtree_priorities.png" alt="fig-per-sumtree-priorities" position="center" 
-    caption="Figure 21. An example of a Sum Tree, where each node is the sum of its children." captionPosition="center"
-    style="border-radius: 8px;" captionStyle="color: black;">}}
+    caption="Figure 30. An example of a Sum Tree, where each node is the sum of its children." captionPosition="center"
+    style="border-radius: 8px;" >}}
 
 From the figure we could also see that in order to sample using the priorities in the
 leaves of the tree we essentially divide the whole segment composed of the unions of the
@@ -2672,7 +2716,7 @@ The full implementation of PER is distributed over four files:
   baselines [14], and in [this](https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py) 
   and [this](https://github.com/jaromiru/AI-blog/blob/master/SumTree.py) two implementations.
   We kept a MinTree as in the OpenAI baselines implementation to be consistent with
-  their implementation. However, we could have actually kept a variable updated with the min
+  their implementation. However, I think we could have just kept a variable updated with the min
   at each update of the priorities as well.
 
 * [prioritybuffer.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/prioritybuffer.py),
@@ -2689,7 +2733,9 @@ The full implementation of PER is distributed over four files:
 We will focus mainly in the implementation of the priority buffer, the changes made 
 to the agent base code and the changes made to the model. I'd suggest the reader 
 to refer to the resources about the segmentree and the implementation (this one 
-and the other) to fully understand the sumtree and mintree data structures.
+and the others as well) to fully understand the sumtree and mintree data structures.
+Some tests of the segmentTree, sumTree and minTree can be found in the [tests.ipynb](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/tests.ipynb)
+notebook at the root of the provided package.
 
 The key methods in the priority buffer are the [**\_\_init\_\_**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/utils/prioritybuffer.py#L13)
 [**add**](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/utils/prioritybuffer.py#L56), 
@@ -2698,7 +2744,7 @@ The key methods in the priority buffer are the [**\_\_init\_\_**](https://github
 methods, which we will analyze one by one.
 
 * The constructor ( **\_\_init\_\_** ) instantiates the prioritized replay buffer
-  by copying the required hyperparameters, namely: \\( e \\) amount extra for priority
+  by copying the required hyperparameters, namely: \\( e \\) extra amount for priority
   (recall \\( p_{t} = \vert \delta_{t} \vert + e \\) ), \\( \alpha \\) power to control
   how priority affects the sample probability, \\( \beta \\) power to control the amount
   of importance sampling used (annealed from given value up to 1), and the amount 
@@ -2744,7 +2790,7 @@ methods, which we will analyze one by one.
         self._count = 0
 ```
 
-* The **add** method add an experience tuple to the buffer. We create the experience
+* The **add** method adds an experience tuple to the buffer. We create the experience
   object (data of the leaves of the trees), and add it to both the Sum Tree and the
   Min Tree with maximum priority (as we want to make sure new experiences have a 
   better chance of being picked at least once).
@@ -2930,7 +2976,7 @@ core functionality are located in the **learn** method.
             _states, _actions, _nextStates, _rewards, _dones = _minibatch
 ```
 
-* We then just execute the train step on the action-value network as usual, with
+* We then just execute the training step on the action-value network as usual, with
   the slight addition of the importance sampling weights. After this step, we grab
   the Bellman Errors computed inside the model's functionality and use them to
   update the priorities of the sampled experiences in the minibatch (see line [277](https://github.com/wpumacay/DeeprlND-projects/blob/3bced7f6c4d9fea2439df2ad6c9d8ff7986cb5b8/project1-navigation/navigation/dqn/core/agent.py#L277)).
@@ -3037,7 +3083,167 @@ are located in the **initialize** and **train** methods:
 
 ## 8. Some preliminary tests of the improvements
 
-## 9. Final remarks and future improvements.
+In this section we show some preleminary results obtained with the improvements.
+These results come from the following two extra experiments, which we made in order 
+to evaluate if PER and DDQN helped during training:
+
+* **Experiment 2** : Test vanilla DQN against each of the improvements (DDQN only, PER only and
+                     DDQN + PER).
+* **Experiment 3** : Test if DDQN + PER help in situations with too little exploration.
+                     Our hypothesis was that too little exploration might run into unstable
+                     learning, and DDQN + PER could help stabilize this process (or even
+                     help solve it if the agent couldn't solve the task using only the baseline).
+
+**Note**: the hyperparameters related to PER were not exposed through the .json file
+(sorry,I will fix it in later tests), but instead hard-coded in the priority-buffer
+implementation (see the [prioritybuffer.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/navigation/dqn/utils/prioritybuffer.py) 
+file). These parameters were set to the following default values:
+
+    eps   : 0.01    # small value added to the absolute value of the bellman error
+    alpha : 0.6     # power to raise the priority in order to further control it
+    beta  : 0.4     # importance sampling annealed factor
+    dbeta : 0.00001 # linear increment per sample added to the "beta" parameter
+
+**Spoiler alert**: we did not find much improvement in the task at hand by using PER and
+DDQN. However, these results are preliminary as we did not tune the hyperparameters
+of PER (nor the other hyperparameters), and we still haven't made test cases for all
+details of the implementations of the algorithm. We tested each separate component
+of the improvements (extra data structures, consistency with other sources' implementations,
+etc.), but still we could have miss some detail in the implementation. Also, perhaps
+the structure of the task at hand is not too complicated for our vanilla DQN to require
+these improvements. We plan to make further tests and experiments in this and more
+complicated environments (visual banana environment, atari, etc.) to see if our improvements
+actually work and help during training.
+
+### 8.1 Experiment 2: Testing DQN improvements against the baseline
+
+This experiment consisted of testing what improvements do DDQN and PER offer to our
+vanilla DQN implementation. The configurations for these can be found in the following
+files:
+
+* [**config_agent_2_1.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_2_1.json) : Configuration with only DDQN active.
+* [**config_agent_2_2.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_2_2.json) : Configuration with only PER active.
+* [**config_agent_2_3.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_2_3.json) : Configuration with DDQN + PER active.
+* [**config_agent_1_1.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_1_1.json) : The baseline, with the same hyperparameters as the ones above.
+
+We used 5 runs and 2 different seeds for each configuration of the experiment. The
+preliminary results (shown below) look very similar for all configurations, and we
+can't conclude if there is any improvement using the variations to vanilla DQN.
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_experiment_2_all_runs_std.png" alt="fig-results-experiment-2-std" position="center" 
+    caption="Figure 29. Std-plots of the first experiment for different seeds." captionPosition="center"
+    style="border-radius: 8px;" >}}
+
+### 8.2 Experiment 3: Testing if DDQN + PER help when using too little exploration
+
+This experiment consisted on testing if DDQN + PER would help in situations where
+there is too little exploration. The configurations used for these experiment can 
+be found in the following files:
+
+* [**config_agent_3_1.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_3_1.json) : Configuration without DDQN nor PER.
+* [**config_agent_3_2.json**](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/configs/config_agent_3_2.json) : Configuration with DDQN + PER active.
+
+The exploration schedule was such that in just 60 episodes we would have reached 
+the fixed 0.01 minimum value for \\( \epsilon \\), and have just 18000 experience 
+tuples in a buffer of size of 131072, which consisted just of a approx. 13% of the 
+replay buffer size. All other interactions would add only experience tuples taken 
+from a practically greedy policy. Also, after just 510 episodes, the replay buffer 
+would have just experience tuples sampled from a greedy policy.
+
+We considered that this case would require clever use of the data (PER) to squeeze
+the most out of the experiences in the replay buffer, and also to not to overestimate
+the q-values, as we would be following a pure greedy policy after just some steps.
+The preliminary results don't show much evidence of improvement, except in a run
+with a different seed, in which the learning curves were less jumpy, indicating
+more stable learning. The results are shown in the image below, which were created
+using 5 runs with 2 seeds for both configurations.
+
+{{<figure src="https://wpumacay.github.io/research_blog/imgs/img_results_experiment_3_all_runs_std.png" alt="fig-results-experiment-3-std" position="center" 
+    caption="Figure 31. Std-plots of the first experiment for different seeds." captionPosition="center"
+    style="border-radius: 8px;" >}}
+
+## 9. Final remarks and future improvements
+
+In this post we tried to explain the DQN algorithm and how to use it to solve
+the banana environment collector task from the ml-agents package. We also implemented
+some improvements to the base DQN implementation, namely DDQN and PER. Some conclusions
+we can get from this project would be the following: 
+
+* Deep reinforcement learning via DQN is a very interesting approach to solve
+  control problems. Not control as in continuous control (which is a subject very 
+  close to my heart :smile:), as we are dealing with only discrete action spaces. 
+  However, as we will see in the following projects, this approach of end-to-end 
+  learning of behaviours can be scaled up to this environments that require continuous 
+  state and action spaces (so stay tuned for the DDPG and PPO post for project 2 :smile:).
+
+* The additions made to action-value function approximation by the DQN authors
+  are quite important. We mentioned a case in which we messed up the soft-updates
+  and were effectively copying the full networks from one to another at a very
+  high frequency (every 4 steps, almost every single step). This is very similar 
+  to the case of just using a single network (so no effective target-network).
+  In a sense we did an ablation test without realizing it :smile: (my bad). I'll
+  make more proper ablation tests as I update this post, like removing fixed-targets 
+  and removing the replay-buffer.
+
+* We also did not mentioned it in a proper section, but we got some interesting behaviour
+  while working with the project. In some situations the agent got stuck during testing,
+  trying to go left and then right, stuck in an loop from which it could not recover (those
+  are the spikes that appear in the noisy plots, which appear very sporadically).
+  This behaviour is kind of similar to how a state-machine of a game agent gets stuck 
+  because the programmer forgot to take into account some detail of the game (I've been
+  there quite some times :cry:). For this situation I just made the MLP bigger 
+  (give it a bigger high capacity model) and it started getting better performance 
+  and got stuck less often, kind of like having more "if-then soft rules" to work 
+  with that help take into account those details. This could be also caused because
+  various states of the environment are aliased, as we only have ray-casting observations
+  feed to a MLP, so perhaps using a recurrent model would help in this situation.
+
+* Also, there's some unexpected behaviour that we can see when we look at the q-values
+  visualizations during testing (see Figure 20). We expected to see a clear differences
+  between the max. q-value and the other q-values, but instead we can just see a small
+  margin that defines the actual action to choose. We haven't run the visualizer into
+  other environments to see if there's a clear distinction during inference, and we
+  consider that this might be caused by the nature of the environment (lunar-lander),
+  as perhaps in a given state you can actually get the same reward if any action is taken,
+  given that the next states will give you different situations that might yield to
+  more distinct q-values (imagine starting taking a bad action, but your policy let's 
+  you recover, and in this situations you see a clear difference). We will try to further
+  analyze this in future updates to the post.
+
+
+Finally, below we mention some of the improvements we consider making in following
+updates to this post:
+
+* Make more tests of the improvements implemented, namely DDQN and PER, as we 
+  did not see much improvement in the given task. We could run the implementation
+  in different environments from gym and atari, make "unit tests" for parts of the
+  implementation, and  tune the hyperparameters (PER) to see if there are any improvements.
+
+* Get the visual-based agent working for the banana environment. We had various issues
+  with the executable provided, namely memory leaks of the executable that used 
+  up all memory in my machine. I first thought they were issues with the replay buffer
+  being to big (as the experiences now stored images), but after some debugging that
+  consisted on checking the system-monitor and even only testing the bare unity 
+  environment in the most simple setting possible, i.e. just instantiating it and running
+  a random policy in a very simple script, we still got leaks that did not let us
+  fully test our implementation. I was considering sending a PR, but the leaks only
+  occur using the old ml-agent API (called unityagents, which is version 0.4.0).
+  We made a custom build in the latest version of unity ml-agents and the unity editor,
+  and got it working without leaks, but still could not get the agent to learn, which
+  might be caused by our DQN agent implementation, our model, or the custom build
+  we made.
+
+* Finish the implementation of a generic model for tensorflow and pytorch (see the 
+  incomplete implementations in the model_pytorch.py and model_tensorflow.py files), 
+  in order to be able to just send a configuration easily via a .json file or similar, 
+  and instantiate the requested model without having to write any pytorch nor tensorflow
+  specific model by ourselves.
+
+* Implement the remaining improvements from rainbow, namely Dueling DQN, Noisy
+  DQN, A3C, Distributional DQN, and try to reproduce a similar ablation test in
+  benchmarks like gym and ml-agents.
+
+* Implement recurent versions of DQN and test the implementation in various environments.
 
 ## References
 
@@ -3055,3 +3261,5 @@ are located in the **initialize** and **train** methods:
 * [12] Schaul, Tom & Quan, John & Antonoglou, Ioannis & Silver, David. [*Prioritized Experience Replay*](https://arxiv.org/abs/1511.05952)
 * [13] Hacker Earth. [Segment Trees data structures](https://www.hackerearth.com/practice/data-structures/advanced-data-structures/segment-trees/tutorial/)
 * [14] OpenAI. [Baselines](https://github.com/openai/baselines)
+* [15] Hessel, Matteo & Modayil, Joseph & van Hasselt, Hado & Schaul, Tom & Ostrovski, Georg & Dabney, Will & Horgan, Dan & Piot, Bilal & Azar, Mohammad & Silver, David [Rainbow](https://arxiv.org/abs/1710.02298)
+* [16] Hausknecht, Matthew & Stone, Peter [Deep Recurrent Q-Learning with Partially Observable MDPs](https://arxiv.org/abs/1507.06527)

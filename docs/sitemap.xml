@@ -3,27 +3,45 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-part3/</loc>
+    <lastmod>2019-05-18T17:33:00-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-part2/</loc>
+    <lastmod>2019-05-18T17:32:00-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-part1/</loc>
+    <lastmod>2019-05-18T17:31:00-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/</loc>
+    <lastmod>2019-05-18T17:30:00-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://wpumacay.github.io/research_blog/categories/</loc>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wpumacay.github.io/research_blog/</loc>
+    <lastmod>2019-05-18T17:33:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wpumacay.github.io/research_blog/posts/</loc>
+    <lastmod>2019-05-18T17:33:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://wpumacay.github.io/research_blog/tags/</loc>
     <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/</loc>
   </url>
   
 </urlset>
