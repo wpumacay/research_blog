@@ -390,13 +390,58 @@ pip install tensorflow-gpu==1.12.0
 </code></pre>
 
 <ul>
-<li>Finally, install the navigation package using pip and the provided
+<li>Install the navigation package using pip and the provided
 <a href="https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/setup.py">setup.py</a>
 file (make sure you are in the folder where the <em>setup.py</em> file is located).</li>
 </ul>
 
 <pre><code class="language-bash"># install the navigation package and its dependencies using pip (dev mode to allow changes)
 pip install -e .
+</code></pre>
+
+<ul>
+<li>Uncompress the executable downloaded previously into the executables folder in
+the repository</li>
+</ul>
+
+<pre><code class="language-bash">cd executables/
+# copy the executable into the executables folder in the repository
+cp {PATH_TO_ZIPPED_EXECUTABLE}/Banana_Linux.zip ./
+# unzip it
+unzip Banana_Linux.zip
+</code></pre>
+
+<ul>
+<li>(Update|Optional) If you want to use the tensorflow implementation, you might run into a little problem
+when setting up tensorflow. The issue comes from the <em>unityagents</em> pip package, because it requires us
+to install tensorflow 1.7.0, which overwrites the version we installed earlier. This will cause various
+problems even if we want to install again our tensorflow version. The workaround we found was to just install
+the unityagents package for version 0.4.0, which is provided by udacity in its repo, with a slight modification
+that removes the tensorflow 1.7.0 dependency. So, instead of using the installation steps from before, follow
+the steps from below.</li>
+</ul>
+
+<pre><code class="language-bash"># clone the udacity repo
+git clone https://github.com/udacity/deep-reinforcement-learning.git
+
+# go to the python folder of the repo
+cd deep-reinforcement-learning/python
+
+# remove the tensorflow dependency from the requirements.txt file with your favourite editor
+vim requirements.txt # remove the tensorflow dependency
+
+# install the unityagents package from this folder
+pip install -e .
+
+# install the requirements from our package
+cd PATH_TO_OUR_PACKAGE
+pip install -r requirements.txt
+
+# install the appropriate tensorflow version after that
+# either the gpu version
+pip install tensorflow-gpu==1.12.0
+# or the cpu version (it still can train with cpu in a moderate amount of time)
+pip install tensorflow==1.12.0
 </code></pre>
 
 <h2 id="3-an-overview-of-the-dqn-algorithm">3. An overview of the DQN algorithm</h2>

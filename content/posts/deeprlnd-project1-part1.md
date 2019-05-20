@@ -800,7 +800,7 @@ regular updates.
 >             * Sample a minibatch $$\left \{ (\phi_{j}, a_{j}, r_{j+1}, \phi_{j+1}) \right \} \sim D $$
 >             * Set Q-targets: $$\\
 >                    y_{j} = \begin{cases} 
->                                r_{j+1} &\text{if } \phi_{j+1} \text{ is terminal} \\ 
+>                                r_{j+1} &\text{if } s_{j+1} \text{ is terminal} \\ 
 >                                r_{j+1} + \gamma \max_{a'} \hat Q(\phi_{j+1},a';\theta^{-}) &\text{otherwise} \end{cases}$$
 >             * Update the action-value network parameters \\( \theta \\) by
 >               taking a step of SGD on \\( (y_{j} - Q(\phi_{j},a_{j};\theta))^{2} \\)
